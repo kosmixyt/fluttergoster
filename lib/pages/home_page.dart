@@ -39,7 +39,8 @@ class _HomePageState extends State<HomePage> {
       });
     } catch (e) {
       print(e);
-      if (e.toString().contains('Unauthorized') || e.toString().contains('403')) {
+      if (e.toString().contains('Unauthorized') ||
+          e.toString().contains('403')) {
         if (mounted) {
           Navigator.pushReplacement(
             context,
@@ -58,9 +59,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     if (_error != null) {
       return Scaffold(
@@ -101,7 +100,7 @@ class NetflixStyleHome extends StatelessWidget {
         ...homeData.lines.asMap().entries.map((entry) {
           int index = entry.key;
           LineRender line = entry.value;
-          
+
           // Use TopTenRow for the third line (index 2) instead of first line
           if (index == 2 && line.data.isNotEmpty) {
             return TopTenRow(
@@ -109,22 +108,24 @@ class NetflixStyleHome extends StatelessWidget {
               items: line.data.take(10).toList(),
             );
           }
-          
+
           // Use regular ContentRow for other lines
           return line.data.isNotEmpty
               ? ContentRow(
-                  title: line.title,
-                  items: line.data,
-                  displayMode: index % 2 == 0
-                      ? MediaCardDisplayMode.poster
-                      : MediaCardDisplayMode.backdrop,
-                )
+                title: line.title,
+                items: line.data,
+                displayMode:
+                    index % 2 == 0
+                        ? MediaCardDisplayMode.poster
+                        : MediaCardDisplayMode.backdrop,
+              )
               : const SizedBox();
         }).toList(),
         if (homeData.providers.isNotEmpty)
           ProviderRow(
-              title: homeData.providers.first.title,
-              providers: homeData.providers.first.data),
+            title: homeData.providers.first.title,
+            providers: homeData.providers.first.data,
+          ),
         const SizedBox(height: 20),
       ],
     );
@@ -147,8 +148,9 @@ class FeaturedContentSection extends StatelessWidget {
             child: CookieImage(
               imageUrl: skinnyRender.backdrop,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) =>
-                  Container(color: Colors.grey[900]),
+              errorBuilder:
+                  (context, error, stackTrace) =>
+                      Container(color: Colors.grey[900]),
             ),
           ),
           Positioned.fill(
@@ -157,10 +159,7 @@ class FeaturedContentSection extends StatelessWidget {
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.8),
-                  ],
+                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
                 ),
               ),
             ),
@@ -178,22 +177,25 @@ class FeaturedContentSection extends StatelessWidget {
                     margin: const EdgeInsets.only(bottom: 10),
                     child: CookieImage(
                       imageUrl: skinnyRender.logo,
-                      errorBuilder: (context, error, stackTrace) => Text(
-                        skinnyRender.name,
-                        style: const TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white),
-                      ),
+                      errorBuilder:
+                          (context, error, stackTrace) => Text(
+                            skinnyRender.name,
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
                     ),
                   )
                 else
                   Text(
                     skinnyRender.name,
                     style: const TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
                 const SizedBox(height: 8),
                 Text(
@@ -220,10 +222,11 @@ class FeaturedContentSection extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (context) => MediaDetailsPage(
-                              mediaId: skinnyRender.id,
-                              mediaType: skinnyRender.type,
-                            ),
+                            builder:
+                                (context) => MediaDetailsPage(
+                                  mediaId: skinnyRender.id,
+                                  mediaType: skinnyRender.type,
+                                ),
                           ),
                         );
                       },
@@ -271,7 +274,10 @@ class _ContentRowState extends State<ContentRow> {
 
   int get _itemsPerPage {
     final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = widget.displayMode == MediaCardDisplayMode.backdrop ? 300.0 + 16.0 : 150.0 + 16.0;
+    final itemWidth =
+        widget.displayMode == MediaCardDisplayMode.backdrop
+            ? 300.0 + 16.0
+            : 150.0 + 16.0;
     return (screenWidth / itemWidth).floor();
   }
 
@@ -303,9 +309,15 @@ class _ContentRowState extends State<ContentRow> {
   void _updateScrollButtons() {
     setState(() {
       _showLeftButton = _scrollController.position.pixels > 0;
-      _showRightButton = _scrollController.position.pixels < _scrollController.position.maxScrollExtent;
+      _showRightButton =
+          _scrollController.position.pixels <
+          _scrollController.position.maxScrollExtent;
       if (_scrollController.position.maxScrollExtent > 0) {
-        _currentPage = (_scrollController.position.pixels / (_scrollController.position.maxScrollExtent / (_totalPages - 1))).round();
+        _currentPage =
+            (_scrollController.position.pixels /
+                    (_scrollController.position.maxScrollExtent /
+                        (_totalPages - 1)))
+                .round();
       } else {
         _currentPage = 0;
       }
@@ -347,14 +359,16 @@ class _ContentRowState extends State<ContentRow> {
 
   @override
   Widget build(BuildContext context) {
-    final double itemHeight = widget.displayMode == MediaCardDisplayMode.poster ? 240 : 170;
+    final double itemHeight =
+        widget.displayMode == MediaCardDisplayMode.poster ? 240 : 170;
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() {
-        _isHovering = false;
-        _hoveredIndex = null; // Clear hovered index when mouse leaves the row
-      }),
+      onExit:
+          (_) => setState(() {
+            _isHovering = false;
+            _hoveredIndex = null;
+          }),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -371,104 +385,94 @@ class _ContentRowState extends State<ContentRow> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Icon(
-                  Icons.arrow_forward,
-                  color: Colors.white70,
-                  size: 20,
-                ),
+                Icon(Icons.arrow_forward, color: Colors.white70, size: 20),
               ],
             ),
           ),
           Stack(
             children: [
               SizedBox(
-                height: itemHeight + 20, // Add extra height for hover animation
-                child: widget.items.isEmpty 
-                ? const Center(child: Text('No content available', style: TextStyle(color: Colors.white70)))
-                : ListView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  scrollDirection: Axis.horizontal,
-                  itemCount: widget.items.length,
-                  itemBuilder: (context, index) {
-                    final item = widget.items[index];
-                    return MouseRegion(
-                      onEnter: (_) => setState(() => _hoveredIndex = index),
-                      onExit: (_) => setState(() => _hoveredIndex = null),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
-                        margin: const EdgeInsets.symmetric(horizontal: 8),
-                        transform: _hoveredIndex == index ? (Matrix4.identity()..translate(0.0, -8.0)..scale(1.05)) : Matrix4.identity(),
-                        child: Stack(
-                          children: [
-                            AnimatedContainer(
-                              duration: const Duration(milliseconds: 200),
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8),
-                                boxShadow: _hoveredIndex == index ? [
-                                  BoxShadow(
-                                    color: Colors.blue.withOpacity(0.5),
-                                    blurRadius: 10,
-                                    spreadRadius: 2,
-                                  )
-                                ] : [],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: MediaCard(
-                                  media: item,
-                                  displayMode: widget.displayMode,
-                                  height: widget.displayMode == MediaCardDisplayMode.poster ? 220 : 170,
-                                  width: widget.displayMode == MediaCardDisplayMode.poster ? 150 : 300,
+                height: itemHeight + 20,
+                child:
+                    widget.items.isEmpty
+                        ? const Center(
+                          child: Text(
+                            'No content available',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        )
+                        : ListView.builder(
+                          controller: _scrollController,
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          itemCount: widget.items.length,
+                          itemBuilder: (context, index) {
+                            final item = widget.items[index];
+                            return MouseRegion(
+                              onEnter:
+                                  (_) => setState(() => _hoveredIndex = index),
+                              onExit:
+                                  (_) => setState(() => _hoveredIndex = null),
+                              child: Container(
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                                alignment: Alignment.center,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  curve: Curves.easeInOut,
+                                  transform:
+                                      _hoveredIndex == index
+                                          ? (Matrix4.identity()
+                                            ..translate(0.0, -8.0)
+                                            ..scale(1.05))
+                                          : Matrix4.identity(),
+                                  transformAlignment: Alignment.center,
+                                  child: Stack(
+                                    clipBehavior: Clip.none,
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          boxShadow:
+                                              _hoveredIndex == index
+                                                  ? [
+                                                    BoxShadow(
+                                                      color: Colors.blue
+                                                          .withOpacity(0.5),
+                                                      blurRadius: 10,
+                                                      spreadRadius: 2,
+                                                    ),
+                                                  ]
+                                                  : [],
+                                        ),
+                                        child: MediaCard(
+                                          media: item,
+                                          displayMode: widget.displayMode,
+                                          height:
+                                              widget.displayMode ==
+                                                      MediaCardDisplayMode
+                                                          .poster
+                                                  ? 220
+                                                  : 170,
+                                          width:
+                                              widget.displayMode ==
+                                                      MediaCardDisplayMode
+                                                          .poster
+                                                  ? 150
+                                                  : 300,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                               ),
-                            ),
-                            if (_hoveredIndex == index)
-                              Positioned(
-                                bottom: 10,
-                                left: 0,
-                                right: 0,
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.play_arrow, color: Colors.black, size: 20),
-                                        onPressed: () {},
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 1),
-                                      ),
-                                      child: IconButton(
-                                        icon: const Icon(Icons.add, color: Colors.white, size: 20),
-                                        onPressed: () {},
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
+                            );
+                          },
                         ),
-                      ),
-                    );
-                  },
-                ),
               ),
               if (_showLeftButton && _isHovering)
                 Positioned(
@@ -491,7 +495,10 @@ class _ContentRowState extends State<ContentRow> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: Colors.white),
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: Colors.white,
+                        ),
                         onPressed: _scrollLeft,
                         padding: EdgeInsets.zero,
                         splashRadius: 20,
@@ -521,7 +528,10 @@ class _ContentRowState extends State<ContentRow> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_right, color: Colors.white),
+                        icon: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                        ),
                         onPressed: _scrollRight,
                         padding: EdgeInsets.zero,
                         splashRadius: 20,
@@ -546,7 +556,10 @@ class _ContentRowState extends State<ContentRow> {
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.3),
+                        color:
+                            _currentPage == index
+                                ? Colors.white
+                                : Colors.white.withOpacity(0.3),
                       ),
                     ),
                   );
@@ -631,11 +644,7 @@ class TopTenRow extends StatefulWidget {
   final String title;
   final List<SkinnyRender> items;
 
-  const TopTenRow({
-    super.key, 
-    required this.title, 
-    required this.items,
-  });
+  const TopTenRow({super.key, required this.title, required this.items});
 
   @override
   State<TopTenRow> createState() => _TopTenRowState();
@@ -670,7 +679,7 @@ class _TopTenRowState extends State<TopTenRow> {
     final screenWidth = MediaQuery.of(context).size.width;
     final itemWidth = 220.0; // Width of each item in the carousel
     final itemsPerPage = (screenWidth / itemWidth).floor();
-    
+
     if (widget.items.isEmpty || itemsPerPage <= 0) {
       _totalPages = 1;
     } else {
@@ -682,9 +691,15 @@ class _TopTenRowState extends State<TopTenRow> {
   void _updateScrollButtons() {
     setState(() {
       _showLeftButton = _scrollController.position.pixels > 0;
-      _showRightButton = _scrollController.position.pixels < _scrollController.position.maxScrollExtent;
+      _showRightButton =
+          _scrollController.position.pixels <
+          _scrollController.position.maxScrollExtent;
       if (_scrollController.position.maxScrollExtent > 0) {
-        _currentPage = (_scrollController.position.pixels / (_scrollController.position.maxScrollExtent / (_totalPages - 1))).round();
+        _currentPage =
+            (_scrollController.position.pixels /
+                    (_scrollController.position.maxScrollExtent /
+                        (_totalPages - 1)))
+                .round();
       } else {
         _currentPage = 0;
       }
@@ -715,10 +730,11 @@ class _TopTenRowState extends State<TopTenRow> {
   Widget build(BuildContext context) {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
-      onExit: (_) => setState(() {
-        _isHovering = false;
-        _hoveredIndex = null; // Clear hovered index when mouse leaves the row
-      }),
+      onExit:
+          (_) => setState(() {
+            _isHovering = false;
+            _hoveredIndex = null;
+          }),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -736,42 +752,52 @@ class _TopTenRowState extends State<TopTenRow> {
           Stack(
             children: [
               SizedBox(
-                height: 290, // Taller to accommodate the number overlay
+                height: 290,
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   scrollDirection: Axis.horizontal,
-                  itemCount: widget.items.length > 10 ? 10 : widget.items.length,
+                  clipBehavior: Clip.none,
+                  itemCount:
+                      widget.items.length > 10 ? 10 : widget.items.length,
                   itemBuilder: (context, index) {
                     final item = widget.items[index];
                     return MouseRegion(
                       onEnter: (_) => setState(() => _hoveredIndex = index),
                       onExit: (_) => setState(() => _hoveredIndex = null),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        curve: Curves.easeInOut,
+                      child: Container(
                         margin: const EdgeInsets.only(bottom: 10),
-                        transform: _hoveredIndex == index 
-                          ? (Matrix4.identity()..translate(0.0, -10.0)..scale(1.05))
-                          : Matrix4.identity(),
-                        child: Stack(
-                          children: [
-                            Padding(
-                              padding: const EdgeInsets.fromLTRB(50, 0, 8, 0),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  boxShadow: _hoveredIndex == index ? [
-                                    BoxShadow(
-                                      color: Colors.red.shade700.withOpacity(0.5),
-                                      blurRadius: 12,
-                                      spreadRadius: 2,
-                                    )
-                                  ] : [],
-                                ),
-                                child: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
+                        alignment: Alignment.center,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          transform:
+                              _hoveredIndex == index
+                                  ? (Matrix4.identity()
+                                    ..translate(0.0, -10.0)
+                                    ..scale(1.05))
+                                  : Matrix4.identity(),
+                          transformAlignment: Alignment.center,
+                          child: Stack(
+                            clipBehavior: Clip.none,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.fromLTRB(50, 0, 8, 0),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    boxShadow:
+                                        _hoveredIndex == index
+                                            ? [
+                                              BoxShadow(
+                                                color: Colors.red.shade700
+                                                    .withOpacity(0.5),
+                                                blurRadius: 12,
+                                                spreadRadius: 2,
+                                              ),
+                                            ]
+                                            : [],
+                                  ),
                                   child: MediaCard(
                                     media: item,
                                     displayMode: MediaCardDisplayMode.poster,
@@ -780,71 +806,36 @@ class _TopTenRowState extends State<TopTenRow> {
                                   ),
                                 ),
                               ),
-                            ),
-                            Positioned(
-                              left: 0,
-                              bottom: 0,
-                              child: SizedBox(
-                                height: 260,
-                                width: 100,
-                                child: Center(
-                                  child: Text(
-                                    '${index + 1}',
-                                    style: TextStyle(
-                                      fontSize: 160,
-                                      fontWeight: FontWeight.bold,
-                                      color: Colors.red.shade700,
-                                      height: 0.8,
-                                      shadows: [
-                                        Shadow(
-                                          color: Colors.black.withOpacity(0.5),
-                                          blurRadius: 5,
-                                          offset: const Offset(2, 2),
-                                        ),
-                                      ],
+                              Positioned(
+                                left: 0,
+                                bottom: 0,
+                                child: SizedBox(
+                                  height: 260,
+                                  width: 100,
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        fontSize: 160,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.red.shade700,
+                                        height: 0.8,
+                                        shadows: [
+                                          Shadow(
+                                            color: Colors.black.withOpacity(
+                                              0.5,
+                                            ),
+                                            blurRadius: 5,
+                                            offset: const Offset(2, 2),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                            ),
-                            if (_hoveredIndex == index)
-                              Positioned(
-                                bottom: 10,
-                                right: 20,
-                                child: Row(
-                                  children: [
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(Icons.play_arrow, color: Colors.black),
-                                        onPressed: () {},
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Container(
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.7),
-                                        shape: BoxShape.circle,
-                                        border: Border.all(color: Colors.white, width: 1),
-                                      ),
-                                      child: IconButton(
-                                        icon: Icon(Icons.add, color: Colors.white),
-                                        onPressed: () {},
-                                        padding: EdgeInsets.zero,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
+                            ],
+                          ),
                         ),
                       ),
                     );
@@ -872,7 +863,10 @@ class _TopTenRowState extends State<TopTenRow> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_left, color: Colors.white),
+                        icon: const Icon(
+                          Icons.chevron_left,
+                          color: Colors.white,
+                        ),
                         onPressed: _scrollLeft,
                         padding: EdgeInsets.zero,
                         splashRadius: 20,
@@ -902,7 +896,10 @@ class _TopTenRowState extends State<TopTenRow> {
                         ],
                       ),
                       child: IconButton(
-                        icon: const Icon(Icons.chevron_right, color: Colors.white),
+                        icon: const Icon(
+                          Icons.chevron_right,
+                          color: Colors.white,
+                        ),
                         onPressed: _scrollRight,
                         padding: EdgeInsets.zero,
                         splashRadius: 20,
@@ -925,7 +922,10 @@ class _TopTenRowState extends State<TopTenRow> {
                     margin: const EdgeInsets.symmetric(horizontal: 4),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: _currentPage == index ? Colors.white : Colors.white.withOpacity(0.3),
+                      color:
+                          _currentPage == index
+                              ? Colors.white
+                              : Colors.white.withOpacity(0.3),
                     ),
                   );
                 }),

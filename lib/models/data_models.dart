@@ -35,11 +35,7 @@ class LineRender {
   final String title;
   final String type;
 
-  LineRender({
-    required this.data,
-    required this.title,
-    required this.type,
-  });
+  LineRender({required this.data, required this.title, required this.type});
 
   factory LineRender.fromJson(Map<String, dynamic> json) => LineRender(
     data: (json['Data'] as List).map((e) => SkinnyRender.fromJson(e)).toList(),
@@ -93,11 +89,12 @@ class LineRenderProvider {
     required this.type,
   });
 
-  factory LineRenderProvider.fromJson(Map<String, dynamic> json) => LineRenderProvider(
-    data: (json['Data'] as List).map((e) => Provider.fromJson(e)).toList(),
-    title: json['Title'],
-    type: json['Type'],
-  );
+  factory LineRenderProvider.fromJson(Map<String, dynamic> json) =>
+      LineRenderProvider(
+        data: (json['Data'] as List).map((e) => Provider.fromJson(e)).toList(),
+        title: json['Title'],
+        type: json['Type'],
+      );
 
   Map<String, dynamic> toJson() => {
     'Data': data.map((e) => e.toJson()).toList(),
@@ -117,10 +114,7 @@ class Dimension {
     height: (json['height'] as num).toDouble(),
   );
 
-  Map<String, dynamic> toJson() => {
-    'width': width,
-    'height': height,
-  };
+  Map<String, dynamic> toJson() => {'width': width, 'height': height};
 }
 
 class ApiHome {
@@ -137,7 +131,10 @@ class ApiHome {
   factory ApiHome.fromJson(Map<String, dynamic> json) => ApiHome(
     recents: LineRender.fromJson(json['Recents']),
     lines: (json['Lines'] as List).map((e) => LineRender.fromJson(e)).toList(),
-    providers: (json['Providers'] as List).map((e) => LineRenderProvider.fromJson(e)).toList(),
+    providers:
+        (json['Providers'] as List)
+            .map((e) => LineRenderProvider.fromJson(e))
+            .toList(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -153,15 +150,10 @@ class Genre {
 
   Genre({required this.id, required this.name});
 
-  factory Genre.fromJson(Map<String, dynamic> json) => Genre(
-    id: json['ID'],
-    name: json['NAME'],
-  );
+  factory Genre.fromJson(Map<String, dynamic> json) =>
+      Genre(id: json['ID'], name: json['NAME']);
 
-  Map<String, dynamic> toJson() => {
-    'ID': id,
-    'NAME': name,
-  };
+  Map<String, dynamic> toJson() => {'ID': id, 'NAME': name};
 }
 
 class ProviderItem {
@@ -204,7 +196,7 @@ class SkinnyRender {
   final List<Genre> genre;
   final String trailer;
   final WatchData watch;
-  final bool watchlisted;
+  bool watchlisted;
   final String logo;
   final String transcodeUrl;
   final List<ProviderItem> providers;
@@ -248,7 +240,10 @@ class SkinnyRender {
     watchlisted: json['WATCHLISTED'],
     logo: json['LOGO'],
     transcodeUrl: json['TRANSCODE_URL'],
-    providers: (json['PROVIDERS'] as List).map((e) => ProviderItem.fromJson(e)).toList(),
+    providers:
+        (json['PROVIDERS'] as List)
+            .map((e) => ProviderItem.fromJson(e))
+            .toList(),
     displayData: json['DisplayData'],
     logoUrl: json['LOGO'],
     transcodedUrl: json['TRANSCODE_URL'],
@@ -278,20 +273,12 @@ class WatchData {
   final int current;
   final int total;
 
-  WatchData({
-    required this.current, 
-    required this.total,
-  });
+  WatchData({required this.current, required this.total});
 
-  factory WatchData.fromJson(Map<String, dynamic> json) => WatchData(
-    current: json['CURRENT'],
-    total: json['TOTAL'],
-  );
+  factory WatchData.fromJson(Map<String, dynamic> json) =>
+      WatchData(current: json['CURRENT'], total: json['TOTAL']);
 
-  Map<String, dynamic> toJson() => {
-    'CURRENT': current,
-    'TOTAL': total,
-  };
+  Map<String, dynamic> toJson() => {'CURRENT': current, 'TOTAL': total};
 }
 
 class FileItem {
@@ -396,11 +383,15 @@ class MovieItem {
     writer: json['WRITER'] ?? "",
     tagline: json['TAGLINE'] ?? "",
     voteAverage: (json['Vote_average'] as num?)?.toDouble() ?? 0.0,
-    providers: (json['PROVIDERS'] as List).map((e) => Provider.fromJson(e)).toList(),
+    providers:
+        (json['PROVIDERS'] as List).map((e) => Provider.fromJson(e)).toList(),
     type: json['TYPE'],
     description: json['DESCRIPTION'],
     runtime: json['RUNTIME'],
-    similars: (json['SIMILARS'] as List).map((e) => SkinnyRender.fromJson(e)).toList(),
+    similars:
+        (json['SIMILARS'] as List)
+            .map((e) => SkinnyRender.fromJson(e))
+            .toList(),
     watchlisted: json['WATCHLISTED'],
     genre: (json['GENRE'] as List).map((e) => Genre.fromJson(e)).toList(),
     backdrop: json['BACKDROP'],
@@ -524,7 +515,8 @@ class TVItem {
           (json['SEASONS'] as List? ?? [])
               .map((e) => SEASON.fromJson(e))
               .toList(),
-      FILES: (json['FILES'] as List? ?? [])
+      FILES:
+          (json['FILES'] as List? ?? [])
               .map((e) => FileItem.fromJson(e))
               .toList(),
       TRAILER: json['TRAILER'] ?? '',
@@ -696,4 +688,51 @@ class NextFile {
     'FILENAME': FILENAME,
     'INFO': INFO,
   };
+}
+
+class AvailableTorrent {
+  String? id;
+  String? providerName;
+  String? name;
+  String? link;
+  int? seed;
+  int? size;
+  List<String>? flags;
+
+  AvailableTorrent({
+    this.id,
+    this.providerName,
+    this.name,
+    this.link,
+    this.seed,
+    this.size,
+    this.flags,
+  });
+
+  factory AvailableTorrent.fromJson(Map<String, dynamic> json) {
+    return AvailableTorrent(
+      id: json['id']?.toString(),
+      providerName: json['provider_name']?.toString(),
+      name: json['name']?.toString(),
+      link: json['link']?.toString(),
+      seed: json['seed'] != null ? int.tryParse(json['seed'].toString()) : null,
+      size: json['size'] != null ? int.tryParse(json['size'].toString()) : null,
+      flags:
+          json['Flags'] != null
+              ? (json['Flags'] as List).map((e) => e.toString()).toList()
+              : [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final Map<String, dynamic> data = new Map<String, dynamic>();
+    data['id'] = this.id;
+    data['provider_name'] = this.providerName;
+    data['name'] = this.name;
+    data['link'] = this.link;
+    data['seed'] = this.seed;
+    data['size'] = this.size;
+    data['Flags'] = this.flags;
+    return data;
+  }
 }
