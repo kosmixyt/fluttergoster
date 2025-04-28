@@ -58,6 +58,13 @@ class ApiService {
     return newHeaders;
   }
 
+  /// Public method to get headers with cookies
+  Map<String, String> getHeadersWithCookies([
+    Map<String, String>? additionalHeaders,
+  ]) {
+    return _addCookiesToHeaders(additionalHeaders);
+  }
+
   /// Met à jour le stockage des cookies à partir du header 'set-cookie'.
   void _updateCookies(String rawCookie) {
     var cookies = rawCookie.split(',');
@@ -239,9 +246,9 @@ class ApiService {
   /// Récupère les torrents disponibles pour un item (film ou série)
   Future<List<AvailableTorrent>> fetchAvailableTorrents(
     String itemId,
-    String itemType, {
+    String itemType,
     String? seasonId,
-  }) async {
+  ) async {
     String complement = '';
     if (itemType == 'tv' && seasonId != null) {
       complement = '&season=$seasonId';

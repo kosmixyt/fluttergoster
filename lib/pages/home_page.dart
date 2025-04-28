@@ -256,7 +256,7 @@ class ContentRow extends StatefulWidget {
     super.key,
     required this.title,
     required this.items,
-    this.displayMode = MediaCardDisplayMode.backdrop,
+    this.displayMode = MediaCardDisplayMode.poster,
   });
 
   @override

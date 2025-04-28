@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'services/api_service.dart';
 import 'pages/home_page.dart'; // <-- Ajout import
 import 'package:fluttergoster/widgets/goster_top_bar.dart';
@@ -26,15 +27,13 @@ class ApiServiceProvider extends InheritedWidget {
       apiService != oldWidget.apiService;
 }
 
-void main() {
+void main() async {
   // Initialize MediaKit
   MediaKit.ensureInitialized();
-
+  WidgetsFlutterBinding.ensureInitialized();
+  await FullScreen.ensureInitialized();
   final apiService = ApiService(baseUrl: 'https://app.kosmix.fr/api');
-  runApp(ApiServiceProvider(
-    apiService: apiService,
-    child: const MyApp(),
-  ));
+  runApp(ApiServiceProvider(apiService: apiService, child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -43,7 +42,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'Goster',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
       ),
@@ -75,9 +74,7 @@ class _LoginPageState extends State<LoginPage> {
     if (success) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const HomePage(),
-        ),
+        MaterialPageRoute(builder: (context) => const HomePage()),
       );
     } else {
       setState(() {
@@ -134,13 +131,21 @@ class _LoginPageState extends State<LoginPage> {
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Nom d\'utilisateur',
-                          labelStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
+                          labelStyle: TextStyle(
+                            color: Colors.white.withOpacity(0.7),
+                          ),
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(8),
                             borderSide: BorderSide.none,
                           ),
-                          prefixIcon: const Icon(Icons.person, color: Colors.white70),
-                          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                          prefixIcon: const Icon(
+                            Icons.person,
+                            color: Colors.white70,
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            vertical: 16,
+                            horizontal: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -161,26 +166,31 @@ class _LoginPageState extends State<LoginPage> {
                     const SizedBox(height: 24),
                     _loading
                         ? const CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                          )
+                          valueColor: AlwaysStoppedAnimation<Color>(
+                            Colors.white,
+                          ),
+                        )
                         : SizedBox(
-                            width: double.infinity,
-                            height: 50,
-                            child: ElevatedButton(
-                              onPressed: _login,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.deepPurple,
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _login,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.deepPurple,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              child: const Text(
-                                'SE CONNECTER',
-                                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                            ),
+                            child: const Text(
+                              'SE CONNECTER',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
+                        ),
                   ],
                 ),
               ),

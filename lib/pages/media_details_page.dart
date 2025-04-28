@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Add this import for clipboard functionality
+import 'package:fluttergoster/pages/player_page.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 import '../models/data_models.dart';
@@ -523,7 +524,22 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                       borderRadius: BorderRadius.circular(4),
                                     ),
                                   ),
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => PlayerPage(
+                                              videoUrl:
+                                                  selectedFile != null
+                                                      ? selectedFile.downloadUrl
+                                                      : movie
+                                                          .files[0]
+                                                          .downloadUrl,
+                                            ),
+                                      ),
+                                    );
+                                  },
                                   icon: const Icon(Icons.play_arrow, size: 24),
                                   label: Text(
                                     movie.watch.current > 0 ? 'Resume' : 'Play',
@@ -892,6 +908,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                       ),
                             ),
                             const SizedBox(width: 12),
+                            const SizedBox(width: 12),
                             PopupMenuButton<String>(
                               onSelected: (value) {
                                 // No files directly accessible at TV series level
@@ -949,6 +966,16 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                   ),
                                   onPressed: () {
                                     // Action pour lire le prochain épisode
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => PlayerPage(
+                                              videoUrl:
+                                                  tvSeries.NEXT.TRANSCODE_URL,
+                                            ),
+                                      ),
+                                    );
                                   },
                                   icon: const Icon(Icons.play_arrow, size: 24),
                                   label: const Text(
@@ -1106,7 +1133,9 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
             child: TabBarView(
               children:
                   tvSeries.SEASONS
-                      .map((season) => _buildSeasonEpisodes(season))
+                      .map(
+                        (season) => _buildSeasonEpisodes(season, tvSeries.ID),
+                      )
                       .toList(),
             ),
           ),
@@ -1115,19 +1144,36 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
     );
   }
 
-  Widget _buildSeasonEpisodes(SEASON season) {
+  Widget _buildSeasonEpisodes(SEASON season, String seriesId) {
+    final isMobile = MediaQuery.of(context).size.width <= 600;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.only(top: 16.0, bottom: 8.0),
-          child: Text(
-            season.NAME,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-            ),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  season.NAME,
+                  style: const TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              // Affiche le TorrentInfoButton seulement si aucun épisode de la saison n'a de fichiers
+              if (!season.EPISODES.any((ep) => ep.FILES.isNotEmpty) &&
+                  season.SEASON_NUMBER > 0)
+                TorrentInfoButton(
+                  itemId: seriesId,
+                  itemType: 'tv',
+                  hasFiles: false,
+                  seasonNumber: season.SEASON_NUMBER,
+                  seasonId: season.ID.toString(),
+                ),
+            ],
           ),
         ),
         if (season.DESCRIPTION.isNotEmpty)
@@ -1171,6 +1217,18 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
       child: InkWell(
         onTap: () {
           // Action pour lire l'épisode
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder:
+                  (context) => PlayerPage(
+                    videoUrl:
+                        selectedFile != null
+                            ? selectedFile.downloadUrl
+                            : episode.FILES[0].downloadUrl,
+                  ),
+            ),
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -1181,6 +1239,19 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Ajout de l'icône info si aucun fichier
+                  if (episode.FILES.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(right: 6.0, top: 2.0),
+                      child: Tooltip(
+                        message: "Aucun fichier disponible pour cet épisode",
+                        child: Icon(
+                          Icons.info_outline,
+                          color: Colors.amber[300],
+                          size: 18,
+                        ),
+                      ),
+                    ),
                   SizedBox(
                     width: 30,
                     child: Text(
@@ -1224,6 +1295,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                           child: Container(
                             width: 40,
                             height: 40,
+
                             decoration: BoxDecoration(
                               color: Colors.black38,
                               shape: BoxShape.circle,

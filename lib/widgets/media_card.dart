@@ -1,6 +1,7 @@
 import 'dart:async'; // Import for Timer
 import 'package:flutter/material.dart';
 import 'package:fluttergoster/main.dart';
+import 'package:fluttergoster/pages/player_page.dart';
 import '../models/data_models.dart';
 import '../widgets/cookie_image.dart';
 import '../pages/media_details_page.dart';
@@ -421,9 +422,9 @@ class _MediaCardState extends State<MediaCard>
                                 context,
                                 MaterialPageRoute(
                                   builder:
-                                      (context) => MediaDetailsPage(
-                                        mediaId: widget.media.id.toString(),
-                                        mediaType: widget.media.type.toString(),
+                                      (context) => PlayerPage(
+                                        videoUrl:
+                                            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
                                       ),
                                 ),
                               );
