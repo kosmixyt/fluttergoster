@@ -345,7 +345,7 @@ class _MaterialControlsState extends State<MaterialControls> {
                   color: Colors.black.withOpacity(0.5),
                   child: Column(
                     children: [
-                      // Top controls - Title and options
+                      // Top controls - Title and back button
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 16.0,
@@ -354,6 +354,7 @@ class _MaterialControlsState extends State<MaterialControls> {
                         color: Colors.black.withOpacity(0.7),
                         child: Row(
                           children: [
+                            // Back button with arrow
                             IconButton(
                               icon: const Icon(
                                 Icons.arrow_back,
@@ -362,12 +363,13 @@ class _MaterialControlsState extends State<MaterialControls> {
                               onPressed: widget.onBackPressed,
                             ),
                             const SizedBox(width: 8),
+                            // Episode title
                             Text(
                               widget.videoTitle,
                               style: const TextStyle(
                                 color: Colors.white,
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
                               ),
                             ),
                             const Spacer(),
@@ -378,35 +380,110 @@ class _MaterialControlsState extends State<MaterialControls> {
                                 // Implement casting functionality
                               },
                             ),
-                            // Remove quality selector button - it's not functional yet
-                            // Subtitle toggle
-                            TextButton.icon(
+                            // HD indicator
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 3,
+                              ),
+                              margin: const EdgeInsets.symmetric(horizontal: 5),
+                              decoration: BoxDecoration(
+                                border: Border.all(
+                                  color: Colors.white,
+                                  width: 1.0,
+                                ),
+                                borderRadius: BorderRadius.circular(4.0),
+                              ),
+                              child: const Text(
+                                'HD',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            // FullHD text
+                            const Text(
+                              "FullHd",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            // CC button for subtitles
+                            TextButton(
                               onPressed: () {
                                 _showSubtitleSelectionDialog();
                                 _startHideControlsTimer();
                               },
-                              icon: const Icon(
-                                Icons.closed_caption,
-                                color: Colors.white,
-                              ),
-                              label: Text(
-                                _currentSubtitle,
-                                style: const TextStyle(color: Colors.white),
-                              ),
                               style: TextButton.styleFrom(
                                 backgroundColor: Colors.transparent,
+                                padding: EdgeInsets.zero,
+                                minimumSize: const Size(50, 30),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      border: Border.all(
+                                        color: Colors.white,
+                                        width: 1.0,
+                                      ),
+                                      borderRadius: BorderRadius.circular(4.0),
+                                    ),
+                                    child: const Text(
+                                      'CC',
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 5),
+                                  Text(
+                                    _currentSubtitle == "No Subs"
+                                        ? "No Subs"
+                                        : "Subs",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            // Audio icon
-                            IconButton(
-                              icon: const Icon(
-                                Icons.headphones,
-                                color: Colors.white,
-                              ),
+                            // Audio control
+                            TextButton.icon(
                               onPressed: () {
                                 _showAudioSelectionDialog();
                                 _startHideControlsTimer();
                               },
+                              icon: const Icon(
+                                Icons.headset,
+                                color: Colors.white,
+                                size: 20,
+                              ),
+                              label: Text(
+                                "fre",
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              style: TextButton.styleFrom(
+                                backgroundColor: Colors.transparent,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
                             ),
                           ],
                         ),
@@ -421,7 +498,7 @@ class _MaterialControlsState extends State<MaterialControls> {
                         color: Colors.black.withOpacity(0.7),
                         child: Column(
                           children: [
-                            // Progress bar
+                            // Progress bar with yellow indicator
                             _buildProgressBar(),
 
                             Padding(
@@ -471,7 +548,6 @@ class _MaterialControlsState extends State<MaterialControls> {
                                       color: Colors.white,
                                     ),
                                     onPressed: () {
-                                      // Make sure this callback is properly invoked
                                       widget.onFullscreenPressed();
                                       _startHideControlsTimer();
                                     },
@@ -525,7 +601,7 @@ class _MaterialControlsState extends State<MaterialControls> {
                   // When unmuting, restore to a reasonable volume
                   final newVolume = _lastVolume > 10 ? _lastVolume : 50;
                   // Convert from slider scale (0-100) to player scale (0-1)
-                  widget.player.setVolume(newVolume.toDouble() );
+                  widget.player.setVolume(newVolume / 100);
                 } else {
                   // When muting, set volume to 0
                   widget.player.setVolume(0.0);
@@ -555,10 +631,8 @@ class _MaterialControlsState extends State<MaterialControls> {
                   max: 100.0,
                   onChanged: (value) {
                     double newVolume = value;
-                    print('Volume changed to: $newVolume');
-
-                    // Passez directement la valeur (0-100) à setVolume
-                    widget.player.setVolume(newVolume);
+                    // Convert from slider scale (0-100) to player scale (0-1)
+                    widget.player.setVolume(newVolume / 100);
                   },
                   onChangeStart: (_) {
                     _cancelHideControlsTimer();
@@ -585,22 +659,18 @@ class _MaterialControlsState extends State<MaterialControls> {
     );
   }
 
-  // Progress bar widget - fixed implementation with proper seeking
+  // Progress bar widget with yellow indicator
   Widget _buildProgressBar() {
     return StreamBuilder<Duration>(
       stream: widget.player.stream.position,
       builder: (context, positionSnapshot) {
-        // Force position update from player when snapshot is unavailable
         final position = positionSnapshot.data ?? widget.player.state.position;
 
         return StreamBuilder<Duration>(
           stream: widget.player.stream.duration,
           builder: (context, durationSnapshot) {
-            // Force duration update from player when snapshot is unavailable
             final duration =
                 durationSnapshot.data ?? widget.player.state.duration;
-
-            // Prevent division by zero and ensure valid percentage
             final double progressPercent =
                 duration.inMilliseconds > 0
                     ? (position.inMilliseconds / duration.inMilliseconds).clamp(
@@ -611,7 +681,7 @@ class _MaterialControlsState extends State<MaterialControls> {
 
             return Column(
               children: [
-                // Use a more reliable position tracking method
+                // Custom progress bar with yellow indicator
                 StreamBuilder<bool>(
                   stream: widget.player.stream.playing,
                   builder: (context, playingSnapshot) {
@@ -628,7 +698,9 @@ class _MaterialControlsState extends State<MaterialControls> {
                         ),
                         activeTrackColor: Colors.grey,
                         inactiveTrackColor: Colors.grey[800],
-                        thumbColor: Colors.yellow,
+                        thumbColor:
+                            Colors
+                                .yellow, // Yellow indicator as shown in the image
                         overlayColor: Colors.yellow.withOpacity(0.3),
                       ),
                       child: Slider(

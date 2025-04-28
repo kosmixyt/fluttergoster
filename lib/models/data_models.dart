@@ -736,3 +736,175 @@ class AvailableTorrent {
     return data;
   }
 }
+
+class QUALITY {
+  final String name;
+  final int height;
+  final int width;
+
+  QUALITY({required this.name, required this.height, required this.width});
+
+  factory QUALITY.fromJson(Map<String, dynamic> json) => QUALITY(
+    name: json['name'] ?? '',
+    height: json['height'] ?? 0,
+    width: json['width'] ?? 0,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'height': height,
+    'width': width,
+  };
+}
+
+class AUDIO_TRACK {
+  final String language;
+  final String name;
+  final String id;
+
+  AUDIO_TRACK({required this.language, required this.name, required this.id});
+
+  factory AUDIO_TRACK.fromJson(Map<String, dynamic> json) => AUDIO_TRACK(
+    language: json['language'] ?? '',
+    name: json['name'] ?? '',
+    id: json['id'] ?? '',
+  );
+
+  Map<String, dynamic> toJson() => {
+    'language': language,
+    'name': name,
+    'id': id,
+  };
+}
+
+class SUBTITLE {
+  final String language;
+  final String name;
+  final String id;
+
+  SUBTITLE({required this.language, required this.name, required this.id});
+
+  factory SUBTITLE.fromJson(Map<String, dynamic> json) => SUBTITLE(
+    language: json['language'] ?? '',
+    name: json['name'] ?? '',
+    id: json['id'] ?? '',
+  );
+
+  Map<String, dynamic> toJson() => {
+    'language': language,
+    'name': name,
+    'id': id,
+  };
+}
+
+class SeasonItem {
+  final int id;
+  final String name;
+  final int seasonNumber;
+
+  SeasonItem({
+    required this.id,
+    required this.name,
+    required this.seasonNumber,
+  });
+
+  factory SeasonItem.fromJson(Map<String, dynamic> json) => SeasonItem(
+    id: json['id'] ?? 0,
+    name: json['name'] ?? '',
+    seasonNumber: json['season_number'] ?? 0,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'name': name,
+    'season_number': seasonNumber,
+  };
+}
+
+class TranscoderRes {
+  final String manifest;
+  final String downloadUrl;
+  final String uuid;
+  final List<QUALITY> qualitys;
+  final List<AUDIO_TRACK> tracks;
+  final List<SUBTITLE> subtitles;
+  final int current;
+  final int total;
+  final List<SeasonItem> seasons;
+  final String name;
+  final String poster;
+  final String backdrop;
+  final bool isLive;
+  final NextFile next;
+  final int taskId;
+  final bool isBrowserPlayable;
+
+  TranscoderRes({
+    required this.manifest,
+    required this.downloadUrl,
+    required this.uuid,
+    required this.qualitys,
+    required this.tracks,
+    required this.subtitles,
+    required this.current,
+    required this.total,
+    required this.seasons,
+    required this.name,
+    required this.poster,
+    required this.backdrop,
+    required this.isLive,
+    required this.next,
+    required this.taskId,
+    required this.isBrowserPlayable,
+  });
+
+  factory TranscoderRes.fromJson(Map<String, dynamic> json) => TranscoderRes(
+    manifest: json['manifest'] ?? '',
+    downloadUrl: json['download_url'] ?? '',
+    uuid: json['uuid'] ?? '',
+    qualitys:
+        (json['qualitys'] as List? ?? [])
+            .map((e) => QUALITY.fromJson(e))
+            .toList(),
+    tracks:
+        (json['tracks'] as List? ?? [])
+            .map((e) => AUDIO_TRACK.fromJson(e))
+            .toList(),
+    subtitles:
+        (json['subtitles'] as List? ?? [])
+            .map((e) => SUBTITLE.fromJson(e))
+            .toList(),
+    current: json['current'] ?? 0,
+    total: json['total'] ?? 0,
+    seasons:
+        (json['seasons'] as List? ?? [])
+            .map((e) => SeasonItem.fromJson(e))
+            .toList(),
+    name: json['name'] ?? '',
+    poster: json['poster'] ?? '',
+    backdrop: json['backdrop'] ?? '',
+    isLive: json['isLive'] ?? false,
+    next: NextFile.fromJson(json['next'] ?? {}),
+    taskId: json['task_id'] ?? 0,
+    isBrowserPlayable: json['isBrowserPlayable'] ?? false,
+  );
+
+  Map<String, dynamic> toJson() => {
+    'manifest': manifest,
+    'download_url': downloadUrl,
+    'uuid': uuid,
+    'qualitys': qualitys.map((e) => e.toJson()).toList(),
+    'tracks': tracks.map((e) => e.toJson()).toList(),
+    'subtitles': subtitles.map((e) => e.toJson()).toList(),
+    'current': current,
+    'total': total,
+    'seasons': seasons.map((e) => e.toJson()).toList(),
+    'name': name,
+    'poster': poster,
+    'backdrop': backdrop,
+    'isLive': isLive,
+    'next': next.toJson(),
+    'task_id': taskId,
+    'isBrowserPlayable': isBrowserPlayable,
+  };
+}

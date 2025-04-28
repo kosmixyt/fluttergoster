@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:fluttergoster/models/data_models.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:async';
 
 // Remove the problematic import and use our platform-specific clients
 import 'http_client_provider.dart';
@@ -521,5 +522,96 @@ class ApiService {
     }
 
     return 'https://upload.wikimedia.org/wikipedia/commons/2/2e/Unknown_flag_-_European_version.png';
+  }
+
+  /// Récupère les données de transcodage via Server-Sent Events
+  Future<TranscoderRes> getTranscodeData(
+    String uri,
+    Function(String) progressFn,
+    Function(String) errorFn,
+  ) async {
+    final client = _getClient();
+    final request = http.Request('GET', Uri.parse(uri));
+    request.headers.addAll(_addCookiesToHeaders());
+
+    final response = await client.send(request);
+    if (response.statusCode != 200) {
+      errorFn('Connection failed with status code: ${response.statusCode}');
+      throw Exception('Failed to connect to stream');
+    }
+
+    final completer = Completer<TranscoderRes>();
+
+    response.stream
+        .transform(utf8.decoder)
+        .listen(
+          (data) {
+            // SSE format: each message starts with "event:" followed by the event type
+            // then "data:" followed by the event data, and ends with two newlines
+            final events = data.split('\n\n');
+
+            for (var event in events) {
+              if (event.isEmpty) continue;
+
+              final lines = event.split('\n');
+              String? eventType;
+              String? eventData;
+
+              for (var line in lines) {
+                if (line.startsWith('event:')) {
+                  eventType = line.substring(6).trim();
+                } else if (line.startsWith('data:')) {
+                  eventData = line.substring(5).trim();
+                }
+              }
+
+              if (eventType != null && eventData != null) {
+                switch (eventType) {
+                  case 'progress':
+                    progressFn(eventData);
+                    break;
+
+                  case 'error':
+                    errorFn('Failed to communicate with server');
+                    completer.completeError('Connection error');
+                    client.close();
+                    break;
+
+                  case 'transcoder':
+                    try {
+                      TranscoderRes data = jsonDecode(eventData);
+                      completer.complete(data);
+                      client.close();
+                    } catch (e) {
+                      errorFn('Failed to parse transcoder data');
+                      completer.completeError('Parse error');
+                      client.close();
+                    }
+                    break;
+
+                  case 'serverError':
+                    errorFn(eventData);
+                    completer.completeError(eventData);
+                    client.close();
+                    break;
+                }
+              }
+            }
+          },
+          onError: (e) {
+            errorFn('Stream error: $e');
+            completer.completeError('Stream error');
+            client.close();
+          },
+          onDone: () {
+            if (!completer.isCompleted) {
+              completer.completeError(
+                'Stream closed without receiving transcoder data',
+              );
+            }
+          },
+        );
+
+    return completer.future;
   }
 }
