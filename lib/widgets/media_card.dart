@@ -20,7 +20,7 @@ class MediaCard extends StatefulWidget {
   final ApiService? apiService; // New parameter
 
   const MediaCard({
-    Key? key,
+    super.key,
     required this.media,
     this.width = 300.0,
     this.height = 170.0,
@@ -28,7 +28,7 @@ class MediaCard extends StatefulWidget {
     this.hoverDelay = const Duration(milliseconds: 150),
     this.onWatchlistChanged,
     this.apiService, // New optional parameter
-  }) : super(key: key);
+  });
 
   @override
   State<MediaCard> createState() => _MediaCardState();
@@ -38,9 +38,11 @@ class _MediaCardState extends State<MediaCard>
     with SingleTickerProviderStateMixin {
   bool _isHovering = false;
   bool _isUpdatingWatchlist = false;
+  bool _isLongPressed = false; // Add to track long press state
   AnimationController? _animationController;
   Animation<double>? _scaleAnimation;
   Timer? _hoverTimer;
+  Timer? _longPressTimer; // Timer to auto-dismiss long press state
 
   @override
   void initState() {
@@ -62,6 +64,7 @@ class _MediaCardState extends State<MediaCard>
   @override
   void dispose() {
     _hoverTimer?.cancel();
+    _longPressTimer?.cancel(); // Cancel the long press timer
     _animationController?.dispose();
     super.dispose();
   }
@@ -83,7 +86,34 @@ class _MediaCardState extends State<MediaCard>
     }
   }
 
-  // Handle adding or removing from watchlistr
+  // Handle long press hover simulation
+  void _handleLongPress() {
+    setState(() {
+      _isLongPressed = true;
+      _isHovering = true;
+    });
+    _startHoverAnimation();
+
+    // Optional: auto-dismiss after some time (can be removed if you want it to stay indefinitely)
+    _longPressTimer?.cancel();
+    _longPressTimer = Timer(const Duration(seconds: 10), () {
+      if (mounted && _isLongPressed) {
+        setState(() {
+          _isLongPressed = false;
+          _isHovering = false;
+        });
+        _stopHoverAnimation();
+      }
+    });
+  }
+
+  // Don't reset on touch end - let it persist until tapped
+  void _handleTouchEnd() {
+    // Intentionally empty - we don't want to cancel the hover state on release
+    // The state will be canceled on next tap
+  }
+
+  // Handle adding or removing from watchlist
   Future<void> _toggleWatchlist() async {
     if (_isUpdatingWatchlist) return; // Prevent multiple requests
 
@@ -153,22 +183,36 @@ class _MediaCardState extends State<MediaCard>
         _startHoverAnimation();
       },
       onExit: (_) {
-        setState(() => _isHovering = false);
-        _stopHoverAnimation();
+        if (!_isLongPressed) {
+          setState(() => _isHovering = false);
+          _stopHoverAnimation();
+        }
       },
       child: GestureDetector(
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder:
-                  (context) => MediaDetailsPage(
-                    mediaId: widget.media.id.toString(),
-                    mediaType: widget.media.type.toString(),
-                  ),
-            ),
-          );
+          if (_isLongPressed) {
+            // Cancel long press mode on tap
+            setState(() {
+              _isLongPressed = false;
+              _isHovering = false;
+            });
+            _stopHoverAnimation();
+          } else {
+            // Regular navigation
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => MediaDetailsPage(
+                      mediaId: widget.media.id.toString(),
+                      mediaType: widget.media.type.toString(),
+                    ),
+              ),
+            );
+          }
         },
+        onLongPress: _handleLongPress,
+        onLongPressEnd: (_) => _handleTouchEnd(),
         child:
             _animationController == null
                 ? _buildCardWithoutAnimation()
@@ -196,8 +240,6 @@ class _MediaCardState extends State<MediaCard>
         return _buildPosterCard();
       case MediaCardDisplayMode.backdrop:
         return _buildBackdropCard();
-      // default:
-      //   return _buildBackdropCard();
     }
   }
 
@@ -423,8 +465,7 @@ class _MediaCardState extends State<MediaCard>
                                 MaterialPageRoute(
                                   builder:
                                       (context) => PlayerPage(
-                                        videoUrl:
-                                            "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
+                                        transcodeUrl: widget.media.transcodeUrl,
                                       ),
                                 ),
                               );
@@ -446,9 +487,6 @@ class _MediaCardState extends State<MediaCard>
                         // Add/Remove button that reflects watchlist state
                         ElevatedButton(
                           onPressed: _toggleWatchlist,
-                          child: Text(
-                            widget.media.watchlisted ? 'Remove' : 'Add',
-                          ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor:
                                 widget.media.watchlisted
@@ -463,6 +501,9 @@ class _MediaCardState extends State<MediaCard>
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
                             ),
+                          ),
+                          child: Text(
+                            widget.media.watchlisted ? 'Remove' : 'Add',
                           ),
                         ),
                       ],
@@ -701,10 +742,10 @@ class _MediaCardState extends State<MediaCard>
                             constraints: const BoxConstraints(),
                             iconSize: 24,
                             style: ButtonStyle(
-                              backgroundColor: MaterialStateProperty.all(
+                              backgroundColor: WidgetStateProperty.all(
                                 Colors.black.withOpacity(0.6),
                               ),
-                              minimumSize: MaterialStateProperty.all(
+                              minimumSize: WidgetStateProperty.all(
                                 const Size(32, 32),
                               ),
                             ),

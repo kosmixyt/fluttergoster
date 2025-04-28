@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Add this import for clipboard functionality
 import 'package:fluttergoster/pages/player_page.dart';
+import 'package:fluttergoster/widgets/content_request_modal.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 import '../models/data_models.dart';
@@ -15,10 +16,10 @@ class MediaDetailsPage extends StatefulWidget {
   final String mediaType;
 
   const MediaDetailsPage({
-    Key? key,
+    super.key,
     required this.mediaId,
     required this.mediaType,
-  }) : super(key: key);
+  });
 
   @override
   State<MediaDetailsPage> createState() => _MediaDetailsPageState();
@@ -31,7 +32,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
   bool _didInitialFetch = false;
   bool _isUpdatingWatchlist = false;
   int _selectedFileIndex = 0; // Track selected file for movies
-  Map<int, int> _selectedEpisodeFileIndices =
+  final Map<int, int> _selectedEpisodeFileIndices =
       {}; // Track selected files for episodes
 
   @override
@@ -262,7 +263,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                 left: 0,
                 top: 0,
                 bottom: 0,
-                child: Container(
+                child: SizedBox(
                   width: MediaQuery.of(context).size.width * 0.25,
                   child: CookieImage(
                     imageUrl: movie.poster,
@@ -444,9 +445,20 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                             const SizedBox(width: 12),
                             TorrentInfoButton(
                               itemId: movie.id,
+
                               itemType: 'movie',
                               hasFiles: movie.files.isNotEmpty,
+                              sourceItem:
+                                  movie, // Pass the movie as source item
                             ),
+                            if (movie.files.isEmpty) ...[
+                              ContentRequestButton(
+                                itemId: movie.id,
+                                itemType: 'movie',
+                                apiService: ApiServiceProvider.of(context),
+                              ),
+                              const SizedBox(width: 10),
+                            ],
                           ],
                         ),
 
@@ -530,12 +542,11 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                       MaterialPageRoute(
                                         builder:
                                             (context) => PlayerPage(
-                                              videoUrl:
+                                              transcodeUrl:
                                                   selectedFile != null
-                                                      ? selectedFile.downloadUrl
-                                                      : movie
-                                                          .files[0]
-                                                          .downloadUrl,
+                                                      ? selectedFile
+                                                          .transcodeUrl
+                                                      : movie.transcodeUrl,
                                             ),
                                       ),
                                     );
@@ -726,7 +737,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
               left: 0,
               top: 0,
               bottom: 0,
-              child: Container(
+              child: SizedBox(
                 width: MediaQuery.of(context).size.width * 0.25,
                 child: CookieImage(
                   imageUrl: tvSeries.POSTER,
@@ -943,6 +954,18 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                 label: const Text('Series Options'),
                               ),
                             ),
+                            if (tvSeries.SEASONS.every(
+                              (season) =>
+                                  season.EPISODES.isEmpty ||
+                                  season.EPISODES.every(
+                                    (episode) => episode.FILES.isEmpty,
+                                  ),
+                            ))
+                              ContentRequestButton(
+                                itemId: tvSeries.ID,
+                                itemType: 'tv',
+                                apiService: ApiServiceProvider.of(context),
+                              ),
                           ],
                         ),
                       ),
@@ -971,7 +994,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                       MaterialPageRoute(
                                         builder:
                                             (context) => PlayerPage(
-                                              videoUrl:
+                                              transcodeUrl:
                                                   tvSeries.NEXT.TRANSCODE_URL,
                                             ),
                                       ),
@@ -1134,7 +1157,8 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
               children:
                   tvSeries.SEASONS
                       .map(
-                        (season) => _buildSeasonEpisodes(season, tvSeries.ID),
+                        (season) =>
+                            _buildSeasonEpisodes(season, tvSeries.ID, tvSeries),
                       )
                       .toList(),
             ),
@@ -1144,7 +1168,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
     );
   }
 
-  Widget _buildSeasonEpisodes(SEASON season, String seriesId) {
+  Widget _buildSeasonEpisodes(SEASON season, String seriesId, TVItem tvSeries) {
     final isMobile = MediaQuery.of(context).size.width <= 600;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1172,6 +1196,15 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                   hasFiles: false,
                   seasonNumber: season.SEASON_NUMBER,
                   seasonId: season.ID.toString(),
+                  sourceItem: season, // Pass the TV series as source item
+                ),
+              if (season.EPISODES.isEmpty ||
+                  season.EPISODES.every((episode) => episode.FILES.isEmpty))
+                ContentRequestButton(
+                  itemId: tvSeries.ID,
+                  itemType: 'tv',
+                  seasonId: season.ID,
+                  apiService: ApiServiceProvider.of(context),
                 ),
             ],
           ),
@@ -1222,10 +1255,10 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
             MaterialPageRoute(
               builder:
                   (context) => PlayerPage(
-                    videoUrl:
+                    transcodeUrl:
                         selectedFile != null
-                            ? selectedFile.downloadUrl
-                            : episode.FILES[0].downloadUrl,
+                            ? selectedFile.transcodeUrl
+                            : episode.TRANSCODE_URL,
                   ),
             ),
           );

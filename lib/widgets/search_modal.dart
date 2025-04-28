@@ -7,7 +7,7 @@ import 'package:fluttergoster/main.dart'; // For ApiServiceProvider
 import 'dart:async';
 
 class SearchModal extends StatefulWidget {
-  const SearchModal({Key? key}) : super(key: key);
+  const SearchModal({super.key});
   
   static Future<void> show(BuildContext context) async {
     await showDialog(

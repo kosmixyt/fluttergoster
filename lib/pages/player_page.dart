@@ -5,20 +5,28 @@ import 'package:flutter_fullscreen/flutter_fullscreen.dart';
 import 'package:media_kit/media_kit.dart';
 import 'package:media_kit_video/media_kit_video.dart';
 import '../services/api_service.dart';
+import '../models/data_models.dart';
 import '../main.dart';
+import '../widgets/cookie_image.dart'; // Add import for CookieImage
 
 class PlayerPage extends StatefulWidget {
-  final String videoUrl;
-  final String title;
-  final Map<String, String>? headers;
-  final Duration? startPosition;
+  final String transcodeUrl;
+  final dynamic sourceItem;
+  final String? sourceItemId;
+  final String? sourceItemType;
+  final String? seasonId;
+  final int? seasonNumber;
+  final AvailableTorrent? torrentInfo;
 
   const PlayerPage({
     Key? key,
-    required this.videoUrl,
-    this.title = '',
-    this.headers,
-    this.startPosition,
+    required this.transcodeUrl,
+    this.sourceItem,
+    this.sourceItemId,
+    this.sourceItemType,
+    this.seasonId,
+    this.seasonNumber,
+    this.torrentInfo,
   }) : super(key: key);
 
   @override
@@ -29,6 +37,14 @@ class _PlayerPageState extends State<PlayerPage> {
   late final Player _player;
   late final VideoController _controller;
   bool _isFullScreen = false;
+  bool _isLoading = true;
+  String _errorMessage = '';
+  String _progressMessage = '';
+  TranscoderRes? _transcoderData;
+  Timer? _progressUpdateTimer;
+  late ApiService _apiService;
+  bool _showNextCard =
+      false; // Add this line to track when to show the next card
 
   @override
   void initState() {
@@ -40,6 +56,7 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _apiService = ApiServiceProvider.of(context);
     _initializePlayer();
 
     // Set preferred orientations for the video player
@@ -52,24 +69,115 @@ class _PlayerPageState extends State<PlayerPage> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
   }
 
+  void _onProgress(String progressData) {
+    setState(() {
+      _progressMessage = progressData;
+    });
+  }
+
+  void _onError(String error) {
+    setState(() {
+      _errorMessage = error;
+      _isLoading = false;
+    });
+  }
+
+  // Start sending periodic progress updates to the server
+  void _startProgressUpdates() {
+    // Cancel any existing timer first
+    _progressUpdateTimer?.cancel();
+
+    // Create a new timer that sends updates every 10 seconds
+    _progressUpdateTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
+      if (_transcoderData != null && mounted) {
+        final currentPosition = _player.state.position.inSeconds;
+        final totalDuration = _player.state.duration.inSeconds;
+
+        // Check if we're in the last 5 minutes of playback
+        if (totalDuration - currentPosition <= 300 && totalDuration > 0) {
+          if (!_showNextCard &&
+              _transcoderData!.next.TRANSCODE_URL.isNotEmpty) {
+            setState(() {
+              _showNextCard = true;
+            });
+          }
+        } else if (_showNextCard) {
+          setState(() {
+            _showNextCard = false;
+          });
+        }
+
+        // Only send updates if we're actually playing (position > 0)
+        if (currentPosition > 0) {
+          _apiService
+              .sendProgress(
+                _transcoderData!.file.id.toString(),
+                currentPosition,
+                _transcoderData!.mediaId.toString(),
+                widget.sourceItemType == 'tv'
+                    ? _transcoderData!.getEpisode().toString()
+                    : null,
+                _player.state.duration.inSeconds,
+              )
+              .catchError((error) {
+                // Silently handle errors to not interrupt playback
+                print('Error sending progress update: $error');
+              });
+        }
+      }
+    });
+  }
+
   Future<void> _initializePlayer() async {
-    // Récupère ApiService via le provider
-    final apiService = ApiServiceProvider.of(context);
+    try {
+      // Get ApiService via the provider
+      final apiService = ApiServiceProvider.of(context);
+      _apiService = apiService;
 
-    // Utilise les headers avec cookies d'ApiService en utilisant la méthode publique
-    final Map<String, String> headers = apiService.getHeadersWithCookies(
-      widget.headers,
-    );
+      // Fetch the transcoder data
+      setState(() {
+        _isLoading = true;
+        _errorMessage = '';
+      });
 
-    // Configure the media
-    await _player.open(
-      Media(widget.videoUrl, httpHeaders: headers),
-      play: true,
-    );
+      final transcoderData = await apiService.getTranscodeData(
+        widget.transcodeUrl,
+        _onProgress,
+        _onError,
+      );
+      if (!mounted) return;
+      setState(() {
+        _transcoderData = transcoderData;
+        _isLoading = false;
+      });
 
-    // Set initial position if specified
-    if (widget.startPosition != null) {
-      await _player.seek(widget.startPosition!);
+      // If we have the transcoder data, use the download URL to play the video
+      if (_transcoderData != null) {
+        // Get headers with cookies for the request
+        final Map<String, String> headers = apiService.getHeadersWithCookies();
+
+        // Configure the media with the download URL
+
+        await _player.open(
+          Media(
+            _transcoderData!.downloadUrl,
+            httpHeaders: headers,
+            start:
+                _transcoderData?.current != null
+                    ? Duration(seconds: _transcoderData!.current!)
+                    : Duration(seconds: 0),
+          ),
+          play: true,
+        );
+
+        // Start sending progress updates after video starts playing
+        _startProgressUpdates();
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'Failed to initialize player: $e';
+        _isLoading = false;
+      });
     }
   }
 
@@ -79,66 +187,423 @@ class _PlayerPageState extends State<PlayerPage> {
     });
 
     if (_isFullScreen) {
-      // // Force landscape orientation and immersive mode
-      // SystemChrome.setPreferredOrientations([
-      //   DeviceOrientation.landscapeLeft,
-      //   DeviceOrientation.landscapeRight,
-      // ]);
       FullScreen.setFullScreen(true);
     } else {
-      // // Reset to original orientation and immersive mode
-      // SystemChrome.setPreferredOrientations([
-      //   DeviceOrientation.portraitUp,
-      // ]);
       FullScreen.setFullScreen(false);
+    }
+  }
+
+  void _playNextVideo() {
+    if (_transcoderData != null &&
+        _transcoderData!.next.TRANSCODE_URL.isNotEmpty) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder:
+              (context) => PlayerPage(
+                transcodeUrl: _transcoderData!.next.TRANSCODE_URL,
+                sourceItemType: widget.sourceItemType,
+                sourceItemId: widget.sourceItemId,
+                seasonId: widget.seasonId,
+                seasonNumber: widget.seasonNumber,
+              ),
+        ),
+      );
+    }
+  }
+
+  // Add this method to show next card on demand
+  void _showNextCardOnDemand() {
+    if (_transcoderData != null &&
+        _transcoderData!.next.TRANSCODE_URL.isNotEmpty) {
+      setState(() {
+        _showNextCard = true;
+      });
     }
   }
 
   @override
   void dispose() {
+    // Stop sending progress updates
+    _progressUpdateTimer?.cancel();
+
+    // Final progress update before closing
+    if (_transcoderData != null && _player.state.position.inSeconds > 0) {
+      _apiService.sendProgress(
+        _transcoderData!.file.id.toString(),
+        _player.state.position.inSeconds,
+        _transcoderData!.mediaId.toString(),
+        widget.sourceItemType == 'tv'
+            ? _transcoderData!.getEpisode().ID.toString()
+            : null,
+        _player.state.duration.inSeconds,
+      );
+    }
+
+    // Reset orientation to allow all orientations (including portrait)
+    SystemChrome.setPreferredOrientations([
+      DeviceOrientation.portraitUp,
+      DeviceOrientation.portraitDown,
+      DeviceOrientation.landscapeLeft,
+      DeviceOrientation.landscapeRight,
+    ]);
+
+    // Reset system UI mode to normal
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
+
     _player.dispose();
-
     FullScreen.setFullScreen(false); // Reset full screen on dispose
-
     super.dispose();
+  }
+
+  // Determine if the current device is mobile based on screen size
+  bool _isMobileDevice(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    // Consider devices with width less than 600dp as mobile
+    return size.shortestSide < 600;
+  }
+
+  Widget _buildNextEpisodeCard() {
+    // Return nothing if there's no data or no next episode
+    if (_transcoderData == null ||
+        _transcoderData!.next.TRANSCODE_URL.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    // Return nothing if we shouldn't show the card yet (before last 5 minutes)
+    if (!_showNextCard) {
+      return const SizedBox.shrink();
+    }
+
+    final next = _transcoderData!.next;
+
+    return Positioned(
+      right: 20,
+      bottom: 120, // Positioned higher above the timeline
+      child: AnimatedSlide(
+        offset: _showNextCard ? const Offset(0, 0) : const Offset(1, 0),
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeOutCubic,
+        child: AnimatedOpacity(
+          opacity: _showNextCard ? 1.0 : 0.0,
+          duration: const Duration(milliseconds: 500),
+          child: GestureDetector(
+            onTap: _playNextVideo,
+            child: SizedBox(
+              width: 280,
+              height: 160,
+              child: Card(
+                clipBehavior: Clip.antiAlias,
+                margin: EdgeInsets.zero,
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    // Background image with overlay gradient
+                    next.BACKDROP.isNotEmpty
+                        ? CookieImage(
+                          imageUrl: next.BACKDROP,
+                          fit: BoxFit.cover,
+                          errorBuilder:
+                              (_, __, ___) => Container(
+                                color: Colors.grey[900],
+                                child: const Icon(
+                                  Icons.movie,
+                                  color: Colors.white30,
+                                  size: 50,
+                                ),
+                              ),
+                        )
+                        : Container(
+                          color: Colors.grey[900],
+                          child: const Icon(
+                            Icons.movie,
+                            color: Colors.white30,
+                            size: 50,
+                          ),
+                        ),
+
+                    // Dark gradient overlay
+                    Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            Colors.black.withOpacity(0.2),
+                            Colors.black.withOpacity(0.7),
+                          ],
+                          stops: const [0.7, 1.0],
+                        ),
+                      ),
+                    ),
+
+                    // Close button in top-right corner
+                    Positioned(
+                      top: 5,
+                      right: 5,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _showNextCard = false;
+                          });
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(
+                            color: Colors.black38,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.close,
+                            color: Colors.white,
+                            size: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Play button in center
+                    Positioned.fill(
+                      child: Center(
+                        child: Container(
+                          width: 48,
+                          height: 48,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF4169E1), // Royal blue color
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(
+                            Icons.play_arrow,
+                            color: Colors.white,
+                            size: 28,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    // Bottom text info
+                    Positioned(
+                      left: 8,
+                      right: 8,
+                      bottom: 8,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Play Next label
+                          const Text(
+                            'Play Next',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+
+                          // Episode number (extract from info or name)
+                          Text(
+                            _extractEpisodeInfo(next),
+                            style: TextStyle(
+                              color: Colors.grey[300],
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+
+                          // Episode title
+                          Text(
+                            next.NAME,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 13,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper method to extract episode info like "S01E04" from next episode data
+  String _extractEpisodeInfo(NextFile next) {
+    // Try to extract from INFO field first
+    if (next.INFO.isNotEmpty) {
+      // Look for patterns like "S01E04" or "1x04"
+      RegExp seasonEpisodePattern = RegExp(
+        r'S\d+E\d+|[0-9]+x[0-9]+',
+        caseSensitive: false,
+      );
+      final match = seasonEpisodePattern.firstMatch(next.INFO);
+      if (match != null) {
+        return match.group(0)!.toUpperCase();
+      }
+    }
+
+    // Try to extract from NAME or FILENAME as fallback
+    RegExp episodePattern = RegExp(
+      r'S\d+E\d+|[0-9]+x[0-9]+',
+      caseSensitive: false,
+    );
+
+    final nameMatch = episodePattern.firstMatch(next.NAME);
+    if (nameMatch != null) {
+      return nameMatch.group(0)!.toUpperCase();
+    }
+
+    final fileMatch = episodePattern.firstMatch(next.FILENAME);
+    if (fileMatch != null) {
+      return fileMatch.group(0)!.toUpperCase();
+    }
+
+    return ''; // Return empty if no pattern found
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Video(
-        controller: _controller,
-        controls: (VideoState state) {
-          return MaterialControls(
-            player: _player,
-            videoTitle: widget.title,
-            onBackPressed: () => Navigator.pop(context),
-            onFullscreenPressed: _toggleFullScreen,
-            isFullscreen: _isFullScreen,
-          );
-        },
+      body:
+          _isLoading
+              ? _buildLoadingView()
+              : _errorMessage.isNotEmpty
+              ? _buildErrorView()
+              : Stack(
+                children: [
+                  Video(
+                    controller: _controller,
+                    controls: (VideoState state) {
+                      return MaterialControls(
+                        player: _player,
+                        videoTitle: _transcoderData!.name,
+                        onBackPressed: () => Navigator.pop(context),
+                        onFullscreenPressed: _toggleFullScreen,
+                        isFullscreen: _isFullScreen,
+                        // Add new parameter for next button callback
+                        onNextPressed: _showNextCardOnDemand,
+                        // Add hasNext parameter to enable/disable next button
+                        hasNext:
+                            _transcoderData != null &&
+                            _transcoderData!.next.TRANSCODE_URL.isNotEmpty,
+                        // Pass isMobileDevice to MaterialControls
+                        isMobileDevice: _isMobileDevice(context),
+                      );
+                    },
+                  ),
+                  // Buffering indicator overlay
+                  StreamBuilder<bool>(
+                    stream: _player.stream.buffering,
+                    builder: (context, snapshot) {
+                      final isBuffering = snapshot.data ?? false;
+                      if (isBuffering) {
+                        return Center(
+                          child: Container(
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.5),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const CircularProgressIndicator(
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                const Text(
+                                  "Chargement...",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      }
+                      return const SizedBox.shrink();
+                    },
+                  ),
+                  // Next episode card
+                  _buildNextEpisodeCard(),
+                ],
+              ),
+    );
+  }
+
+  Widget _buildLoadingView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const CircularProgressIndicator(color: Colors.white),
+          const SizedBox(height: 16),
+          Text(
+            'Loading video...\n$_progressMessage',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildErrorView() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, color: Colors.red, size: 48),
+          const SizedBox(height: 16),
+          Text(
+            _errorMessage,
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: Colors.white),
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Go Back'),
+          ),
+        ],
       ),
     );
   }
 }
 
-// Custom controls class to implement video controls
 class MaterialControls extends StatefulWidget {
   final Player player;
   final String videoTitle;
   final VoidCallback onBackPressed;
   final VoidCallback onFullscreenPressed;
+  final VoidCallback onNextPressed; // Add this parameter
   final bool isFullscreen;
+  final bool hasNext; // Add this parameter
+  final bool isMobileDevice; // Add this parameter
 
   const MaterialControls({
-    Key? key,
+    super.key,
     required this.player,
     required this.videoTitle,
     required this.onBackPressed,
     required this.onFullscreenPressed,
+    required this.onNextPressed, // Add this parameter
     required this.isFullscreen,
-  }) : super(key: key);
+    this.hasNext = false, // Add this parameter with default value
+    required this.isMobileDevice, // Add this parameter
+  });
 
   @override
   State<MaterialControls> createState() => _MaterialControlsState();
@@ -380,38 +845,6 @@ class _MaterialControlsState extends State<MaterialControls> {
                                 // Implement casting functionality
                               },
                             ),
-                            // HD indicator
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 3,
-                              ),
-                              margin: const EdgeInsets.symmetric(horizontal: 5),
-                              decoration: BoxDecoration(
-                                border: Border.all(
-                                  color: Colors.white,
-                                  width: 1.0,
-                                ),
-                                borderRadius: BorderRadius.circular(4.0),
-                              ),
-                              child: const Text(
-                                'HD',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                            // FullHD text
-                            const Text(
-                              "FullHd",
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
                             // CC button for subtitles
                             TextButton(
                               onPressed: () {
@@ -498,15 +931,37 @@ class _MaterialControlsState extends State<MaterialControls> {
                         color: Colors.black.withOpacity(0.7),
                         child: Column(
                           children: [
-                            // Progress bar with yellow indicator
-                            _buildProgressBar(),
+                            // Progress bar with yellow indicator (positioned above other controls)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 8.0),
+                              child: _buildProgressBar(),
+                            ),
 
+                            // Time indicators and controls in a single row
                             Padding(
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 16.0,
                               ),
                               child: Row(
                                 children: [
+                                  // Current position text
+                                  StreamBuilder<Duration>(
+                                    stream: widget.player.stream.position,
+                                    builder: (context, snapshot) {
+                                      final position =
+                                          snapshot.data ??
+                                          widget.player.state.position;
+                                      return Text(
+                                        _formatDuration(position),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      );
+                                    },
+                                  ),
+
+                                  const Spacer(),
+
                                   // Play/Pause button
                                   StreamBuilder<bool>(
                                     stream: widget.player.stream.playing,
@@ -537,21 +992,52 @@ class _MaterialControlsState extends State<MaterialControls> {
                                   // Volume controls
                                   _buildVolumeControl(),
 
-                                  const Spacer(),
-
-                                  // Fullscreen button
-                                  IconButton(
-                                    icon: Icon(
-                                      widget.isFullscreen
-                                          ? Icons.fullscreen_exit
-                                          : Icons.fullscreen,
-                                      color: Colors.white,
+                                  // Next episode button
+                                  if (widget.hasNext)
+                                    IconButton(
+                                      icon: const Icon(
+                                        Icons.skip_next,
+                                        color: Colors.white,
+                                      ),
+                                      tooltip: 'Next episode',
+                                      onPressed: () {
+                                        widget.onNextPressed();
+                                        _startHideControlsTimer();
+                                      },
                                     ),
-                                    onPressed: () {
-                                      widget.onFullscreenPressed();
-                                      _startHideControlsTimer();
+
+                                  // Total duration text
+                                  StreamBuilder<Duration>(
+                                    stream: widget.player.stream.duration,
+                                    builder: (context, snapshot) {
+                                      final duration =
+                                          snapshot.data ??
+                                          widget.player.state.duration;
+                                      return Text(
+                                        _formatDuration(duration),
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                        ),
+                                      );
                                     },
                                   ),
+
+                                  const SizedBox(width: 8),
+
+                                  // Fullscreen button (conditionally shown)
+                                  if (!widget.isMobileDevice)
+                                    IconButton(
+                                      icon: Icon(
+                                        widget.isFullscreen
+                                            ? Icons.fullscreen_exit
+                                            : Icons.fullscreen,
+                                        color: Colors.white,
+                                      ),
+                                      onPressed: () {
+                                        widget.onFullscreenPressed();
+                                        _startHideControlsTimer();
+                                      },
+                                    ),
                                 ],
                               ),
                             ),
@@ -679,91 +1165,57 @@ class _MaterialControlsState extends State<MaterialControls> {
                     )
                     : 0.0;
 
-            return Column(
-              children: [
-                // Custom progress bar with yellow indicator
-                StreamBuilder<bool>(
-                  stream: widget.player.stream.playing,
-                  builder: (context, playingSnapshot) {
-                    final isPlaying = playingSnapshot.data ?? false;
+            return StreamBuilder<bool>(
+              stream: widget.player.stream.playing,
+              builder: (context, playingSnapshot) {
+                final isPlaying = playingSnapshot.data ?? false;
 
-                    return SliderTheme(
-                      data: SliderThemeData(
-                        trackHeight: 2.0,
-                        thumbShape: const RoundSliderThumbShape(
-                          enabledThumbRadius: 6.0,
-                        ),
-                        overlayShape: const RoundSliderOverlayShape(
-                          overlayRadius: 10.0,
-                        ),
-                        activeTrackColor: Colors.grey,
-                        inactiveTrackColor: Colors.grey[800],
-                        thumbColor:
-                            Colors
-                                .yellow, // Yellow indicator as shown in the image
-                        overlayColor: Colors.yellow.withOpacity(0.3),
-                      ),
-                      child: Slider(
-                        value: progressPercent,
-                        min: 0.0,
-                        max: 1.0,
-                        onChanged: (value) {
-                          // Calculate new position based on percentage
-                          final newPosition = Duration(
-                            milliseconds:
-                                (duration.inMilliseconds * value).round(),
-                          );
-
-                          // Seek to new position and ensure it's applied
-                          widget.player.seek(newPosition);
-                        },
-                        onChangeStart: (_) {
-                          // Pause playback during seek for more accurate positioning
-                          final wasPlaying = isPlaying;
-                          if (wasPlaying) {
-                            // Store play state temporarily
-                            widget.player.pause();
-                          }
-                          _cancelHideControlsTimer();
-                        },
-                        onChangeEnd: (value) {
-                          // Resume playback if it was playing before
-                          final newPosition = Duration(
-                            milliseconds:
-                                (duration.inMilliseconds * value).round(),
-                          );
-
-                          // Ensure seek completes properly
-                          widget.player.seek(newPosition).then((_) {
-                            if (isPlaying) {
-                              widget.player.play();
-                            }
-                          });
-
-                          _startHideControlsTimer();
-                        },
-                      ),
-                    );
-                  },
-                ),
-
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Row(
-                    children: [
-                      Text(
-                        _formatDuration(position),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                      const Spacer(),
-                      Text(
-                        _formatDuration(duration),
-                        style: const TextStyle(color: Colors.white),
-                      ),
-                    ],
+                return SliderTheme(
+                  data: SliderThemeData(
+                    trackHeight: 2.0,
+                    thumbShape: const RoundSliderThumbShape(
+                      enabledThumbRadius: 6.0,
+                    ),
+                    overlayShape: const RoundSliderOverlayShape(
+                      overlayRadius: 10.0,
+                    ),
+                    activeTrackColor: Colors.grey,
+                    inactiveTrackColor: Colors.grey[800],
+                    thumbColor:
+                        Colors.yellow, // Yellow indicator as shown in the image
+                    overlayColor: Colors.yellow.withOpacity(0.3),
                   ),
-                ),
-              ],
+                  child: Slider(
+                    value: progressPercent,
+                    min: 0.0,
+                    max: 1.0,
+                    onChanged: (value) {
+                      final newPosition = Duration(
+                        milliseconds: (duration.inMilliseconds * value).round(),
+                      );
+                      widget.player.seek(newPosition);
+                    },
+                    onChangeStart: (_) {
+                      final wasPlaying = isPlaying;
+                      if (wasPlaying) {
+                        widget.player.pause();
+                      }
+                      _cancelHideControlsTimer();
+                    },
+                    onChangeEnd: (value) {
+                      final newPosition = Duration(
+                        milliseconds: (duration.inMilliseconds * value).round(),
+                      );
+                      widget.player.seek(newPosition).then((_) {
+                        if (isPlaying) {
+                          widget.player.play();
+                        }
+                      });
+                      _startHideControlsTimer();
+                    },
+                  ),
+                );
+              },
             );
           },
         );

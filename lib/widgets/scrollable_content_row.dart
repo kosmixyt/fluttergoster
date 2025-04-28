@@ -9,12 +9,12 @@ class ScrollableContentRow extends StatefulWidget {
   final bool showTitle;
 
   const ScrollableContentRow({
-    Key? key,
+    super.key,
     required this.title,
     required this.items,
     this.displayMode = MediaCardDisplayMode.backdrop,
     this.showTitle = true,
-  }) : super(key: key);
+  });
 
   @override
   State<ScrollableContentRow> createState() => _ScrollableContentRowState();

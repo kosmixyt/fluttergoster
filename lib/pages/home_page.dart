@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:fluttergoster/pages/player_page.dart';
+import 'package:media_kit/media_kit.dart';
 import '../services/api_service.dart';
 import '../main.dart';
 import '../models/data_models.dart';
@@ -96,12 +98,18 @@ class NetflixStyleHome extends StatelessWidget {
           title: homeData.recents.title,
           items: homeData.recents.data,
           displayMode: MediaCardDisplayMode.backdrop,
+          isWatchingRow:
+              homeData.recents.title.contains("Watching") ||
+              homeData.recents.title.contains("Regarder"),
         ),
         ...homeData.lines.asMap().entries.map((entry) {
           int index = entry.key;
           LineRender line = entry.value;
 
-          // Use TopTenRow for the third line (index 2) instead of first line
+          bool isWatchingRow =
+              line.title.contains("Watching") ||
+              line.title.contains("Regarder");
+
           if (index == 2 && line.data.isNotEmpty) {
             return TopTenRow(
               title: "Top 10 Today",
@@ -109,7 +117,6 @@ class NetflixStyleHome extends StatelessWidget {
             );
           }
 
-          // Use regular ContentRow for other lines
           return line.data.isNotEmpty
               ? ContentRow(
                 title: line.title,
@@ -118,9 +125,10 @@ class NetflixStyleHome extends StatelessWidget {
                     index % 2 == 0
                         ? MediaCardDisplayMode.poster
                         : MediaCardDisplayMode.backdrop,
+                isWatchingRow: isWatchingRow,
               )
               : const SizedBox();
-        }).toList(),
+        }),
         if (homeData.providers.isNotEmpty)
           ProviderRow(
             title: homeData.providers.first.title,
@@ -208,7 +216,17 @@ class FeaturedContentSection extends StatelessWidget {
                 Row(
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder:
+                                (context) => PlayerPage(
+                                  transcodeUrl: skinnyRender.transcodeUrl,
+                                ),
+                          ),
+                        );
+                      },
                       icon: const Icon(Icons.play_arrow),
                       label: const Text('Lecture'),
                       style: ElevatedButton.styleFrom(
@@ -251,12 +269,14 @@ class ContentRow extends StatefulWidget {
   final String title;
   final List<SkinnyRender> items;
   final MediaCardDisplayMode displayMode;
+  final bool isWatchingRow;
 
   const ContentRow({
     super.key,
     required this.title,
     required this.items,
     this.displayMode = MediaCardDisplayMode.poster,
+    this.isWatchingRow = false,
   });
 
   @override
@@ -271,6 +291,8 @@ class _ContentRowState extends State<ContentRow> {
   int _totalPages = 0;
   bool _isHovering = false;
   int? _hoveredIndex;
+  bool _isDeleting = false;
+  final Set<String> _deletedItemIds = {};
 
   int get _itemsPerPage {
     final screenWidth = MediaQuery.of(context).size.width;
@@ -298,10 +320,14 @@ class _ContentRowState extends State<ContentRow> {
   }
 
   void _calculateTotalPages() {
-    if (widget.items.isEmpty || _itemsPerPage <= 0) {
+    final visibleItems =
+        widget.items
+            .where((item) => !_deletedItemIds.contains(item.id))
+            .toList();
+    if (visibleItems.isEmpty || _itemsPerPage <= 0) {
       _totalPages = 1;
     } else {
-      _totalPages = (widget.items.length / _itemsPerPage).ceil();
+      _totalPages = (visibleItems.length / _itemsPerPage).ceil();
     }
     setState(() {});
   }
@@ -357,10 +383,70 @@ class _ContentRowState extends State<ContentRow> {
     );
   }
 
+  Future<void> _deleteWatchingItem(SkinnyRender item) async {
+    if (_isDeleting) return;
+
+    setState(() {
+      _isDeleting = true;
+    });
+
+    try {
+      final apiService = ApiServiceProvider.of(context);
+      final success = await apiService.deleteContinueWithToast(
+        item.type,
+        item.id,
+      );
+
+      if (success && mounted) {
+        setState(() {
+          _deletedItemIds.add(item.id);
+          _isDeleting = false;
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _calculateTotalPages();
+          });
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Removed from continue watching'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else {
+        setState(() {
+          _isDeleting = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isDeleting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to remove: ${e.toString()}'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final double itemHeight =
         widget.displayMode == MediaCardDisplayMode.poster ? 240 : 170;
+
+    final visibleItems =
+        widget.items
+            .where((item) => !_deletedItemIds.contains(item.id))
+            .toList();
+
+    if (widget.isWatchingRow && visibleItems.isEmpty) {
+      return const SizedBox.shrink();
+    }
 
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovering = true),
@@ -394,7 +480,7 @@ class _ContentRowState extends State<ContentRow> {
               SizedBox(
                 height: itemHeight + 20,
                 child:
-                    widget.items.isEmpty
+                    visibleItems.isEmpty
                         ? const Center(
                           child: Text(
                             'No content available',
@@ -406,9 +492,9 @@ class _ContentRowState extends State<ContentRow> {
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           scrollDirection: Axis.horizontal,
                           clipBehavior: Clip.none,
-                          itemCount: widget.items.length,
+                          itemCount: visibleItems.length,
                           itemBuilder: (context, index) {
-                            final item = widget.items[index];
+                            final item = visibleItems[index];
                             return MouseRegion(
                               onEnter:
                                   (_) => setState(() => _hoveredIndex = index),
@@ -466,6 +552,50 @@ class _ContentRowState extends State<ContentRow> {
                                                   : 300,
                                         ),
                                       ),
+                                      if (widget.isWatchingRow &&
+                                          _hoveredIndex == index)
+                                        Positioned(
+                                          top: 8,
+                                          right: 8,
+                                          child: Container(
+                                            decoration: BoxDecoration(
+                                              color: Colors.black.withOpacity(
+                                                0.7,
+                                              ),
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: IconButton(
+                                              icon:
+                                                  _isDeleting
+                                                      ? SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child: CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                          valueColor:
+                                                              AlwaysStoppedAnimation<
+                                                                Color
+                                                              >(Colors.white),
+                                                        ),
+                                                      )
+                                                      : const Icon(
+                                                        Icons.close,
+                                                        color: Colors.white,
+                                                        size: 20,
+                                                      ),
+                                              tooltip:
+                                                  'Remove from continue watching',
+                                              onPressed:
+                                                  () =>
+                                                      _deleteWatchingItem(item),
+                                              padding: EdgeInsets.zero,
+                                              constraints: const BoxConstraints(
+                                                minWidth: 36,
+                                                minHeight: 36,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
                                     ],
                                   ),
                                 ),

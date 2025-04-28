@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'dart:developer';
 import 'dart:typed_data';
+import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:fluttergoster/models/data_models.dart';
 import 'package:http/http.dart' as http;
+import 'package:flutter_client_sse/flutter_client_sse.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:media_kit/generated/libmpv/bindings.dart';
 import 'dart:async';
 
 // Remove the problematic import and use our platform-specific clients
@@ -37,9 +40,7 @@ class ApiService {
     );
     if (response.statusCode == 200) {
       String? rawCookie = response.headers['set-cookie'];
-      if (rawCookie != null) {
-        _updateCookies(rawCookie);
-      }
+      _updateCookies(rawCookie ?? '');
       return true;
     }
     return false;
@@ -183,6 +184,29 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to get convert options');
+    }
+  }
+
+  Future<void> torrentAction(
+    String action,
+    String torrentId, [
+    bool deleteFiles = false,
+  ]) async {
+    String url = '$baseUrl/torrents/action?id=$torrentId&action=$action';
+
+    // Add deleteFiles parameter for delete action
+    if (action == 'delete') {
+      url += '&deleteFiles=${deleteFiles ? 'true' : 'false'}';
+    }
+
+    final client = _getClient();
+    final response = await client.get(
+      Uri.parse(url),
+      headers: _addCookiesToHeaders(),
+    );
+
+    if (response.statusCode != 200) {
+      throw Exception('Failed to perform torrent action: ${response.body}');
     }
   }
 
@@ -387,9 +411,41 @@ class ApiService {
 
     if (response.statusCode == 200) {
       var data = jsonDecode(response.body);
-      return "${baseUrl}/share/get?id=${data['share']['id']}";
+      return "$baseUrl/share/get?id=${data['share']['id']}";
     } else {
       throw Exception('Failed to create share');
+    }
+  }
+
+  /// Supprimer une requête de téléchargement
+  Future<bool> deleteRequest(int requestId) async {
+    final url = Uri.parse('$baseUrl/request/remove?id=$requestId');
+    final client = _getClient();
+
+    var response = await client.get(url, headers: _addCookiesToHeaders());
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Failed to delete request');
+    }
+  }
+
+  String getShareUrl(int shareId) {
+    return '$baseUrl/share/get?id=$shareId';
+  }
+
+  /// Supprimer un partage
+  Future<bool> deleteShare(int shareId) async {
+    final url = Uri.parse('$baseUrl/share/remove?id=$shareId');
+    final client = _getClient();
+
+    var response = await client.get(url, headers: _addCookiesToHeaders());
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Failed to delete share');
     }
   }
 
@@ -441,6 +497,28 @@ class ApiService {
       return jsonDecode(response.body);
     } else {
       throw Exception('Failed to delete continue');
+    }
+  }
+
+  /// Supprimer un élément de la liste "continuer à regarder" avec notifications toast
+  Future<bool> deleteContinueWithToast(String itemType, String itemId) async {
+    try {
+      final data = await deleteContinue(itemType, itemId);
+
+      if (data.containsKey('error') && data['error'] != null) {
+        // Handle error toast notification
+        // You'll need to implement or use a toast package
+        // For example: Fluttertoast.showToast(msg: data['error']);
+        return false;
+      } else {
+        // Handle success toast notification
+        // For example: Fluttertoast.showToast(msg: data['message'] ?? 'Item removed successfully');
+        return true;
+      }
+    } catch (e) {
+      // Handle exception toast notification
+      // For example: Fluttertoast.showToast(msg: e.toString());
+      return false;
     }
   }
 
@@ -531,87 +609,91 @@ class ApiService {
     Function(String) errorFn,
   ) async {
     final client = _getClient();
-    final request = http.Request('GET', Uri.parse(uri));
-    request.headers.addAll(_addCookiesToHeaders());
-
-    final response = await client.send(request);
-    if (response.statusCode != 200) {
-      errorFn('Connection failed with status code: ${response.statusCode}');
-      throw Exception('Failed to connect to stream');
-    }
-
     final completer = Completer<TranscoderRes>();
 
-    response.stream
-        .transform(utf8.decoder)
-        .listen(
-          (data) {
-            // SSE format: each message starts with "event:" followed by the event type
-            // then "data:" followed by the event data, and ends with two newlines
-            final events = data.split('\n\n');
-
-            for (var event in events) {
-              if (event.isEmpty) continue;
-
-              final lines = event.split('\n');
-              String? eventType;
-              String? eventData;
-
-              for (var line in lines) {
-                if (line.startsWith('event:')) {
-                  eventType = line.substring(6).trim();
-                } else if (line.startsWith('data:')) {
-                  eventData = line.substring(5).trim();
-                }
-              }
-
-              if (eventType != null && eventData != null) {
-                switch (eventType) {
-                  case 'progress':
-                    progressFn(eventData);
-                    break;
-
-                  case 'error':
-                    errorFn('Failed to communicate with server');
-                    completer.completeError('Connection error');
-                    client.close();
-                    break;
-
-                  case 'transcoder':
-                    try {
-                      TranscoderRes data = jsonDecode(eventData);
-                      completer.complete(data);
-                      client.close();
-                    } catch (e) {
-                      errorFn('Failed to parse transcoder data');
-                      completer.completeError('Parse error');
-                      client.close();
-                    }
-                    break;
-
-                  case 'serverError':
-                    errorFn(eventData);
-                    completer.completeError(eventData);
-                    client.close();
-                    break;
-                }
-              }
-            }
-          },
-          onError: (e) {
-            errorFn('Stream error: $e');
-            completer.completeError('Stream error');
-            client.close();
-          },
-          onDone: () {
-            if (!completer.isCompleted) {
-              completer.completeError(
-                'Stream closed without receiving transcoder data',
-              );
-            }
-          },
+    SSEClient.subscribeToSSE(
+      method: SSERequestType.GET,
+      url: '$uri&disableTranscode=true',
+      client: client,
+      header: getHeadersWithCookies(),
+    ).listen((event) {
+      print("Event:" + (event.event ?? ""));
+      if (event.event == "transcoder") {
+        completer.complete(
+          TranscoderRes.fromJson(jsonDecode(event.data ?? "")),
         );
+      }
+      if (event.event == "serverError") {
+        errorFn(event.data ?? "");
+      }
+      if (event.event == "progress") {
+        progressFn(event.data ?? "");
+      }
+    });
+    print("Requested sse");
 
     return completer.future;
+  }
+
+  Future<Me> getMe() async {
+    final url = Uri.parse('$baseUrl/me');
+    final client = _getClient();
+    var response = await client.get(url, headers: _addCookiesToHeaders());
+    if (response.statusCode == 200) {
+      return Me.fromJson(jsonDecode(response.body));
+    } else {
+      throw Exception('Failed to get user data');
+    }
+  }
+
+  Future<void> sendProgress(
+    String fileId,
+    int progress,
+    String mediaId,
+    String? episodeId,
+    int total,
+  ) async {
+    var url =
+        '$baseUrl/transcode/update?currentTime=$progress&fileId=$fileId&media_id=$mediaId&episode_id=${episodeId ?? 0}&total=$total';
+
+    final requestUrl = Uri.parse(url);
+    final client = _getClient();
+    var response = await client.get(
+      requestUrl,
+      headers: _addCookiesToHeaders(),
+    );
+    if (response.statusCode != 200) {
+      throw Exception('Failed to send progress');
+    }
+  }
+
+  /// Envoyer une demande pour un nouveau contenu
+  Future<Map<String, dynamic>> sendContentRequest({
+    required int maxSize,
+    required String itemId,
+    required String itemType,
+    int? seasonId,
+  }) async {
+    String url =
+        '$baseUrl/request/new?max_size=$maxSize&id=$itemId&type=$itemType';
+
+    // Add season_id if we're requesting a TV show and seasonId is provided
+    if (itemType == 'tv' && seasonId != null) {
+      url += '&season_id=$seasonId';
+    }
+
+    final requestUrl = Uri.parse(url);
+    final client = _getClient();
+
+    var response = await client.post(
+      requestUrl,
+      headers: _addCookiesToHeaders(),
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to send content request');
+    }
   }
 }

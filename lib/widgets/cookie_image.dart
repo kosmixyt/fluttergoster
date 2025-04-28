@@ -11,13 +11,13 @@ class CookieImage extends StatefulWidget {
   final Widget Function(BuildContext, Object, StackTrace?)? errorBuilder;
 
   const CookieImage({
-    Key? key,
+    super.key,
     required this.imageUrl,
     this.fit = BoxFit.cover,
     this.width,
     this.height,
     this.errorBuilder,
-  }) : super(key: key);
+  });
 
   @override
   State<CookieImage> createState() => _CookieImageState();

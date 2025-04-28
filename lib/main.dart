@@ -10,10 +10,10 @@ class ApiServiceProvider extends InheritedWidget {
   final ApiService apiService;
 
   const ApiServiceProvider({
-    Key? key,
+    super.key,
     required this.apiService,
-    required Widget child,
-  }) : super(key: key, child: child);
+    required super.child,
+  });
 
   static ApiService of(BuildContext context) {
     final ApiServiceProvider? result =
@@ -52,6 +52,8 @@ class MyApp extends StatelessWidget {
 }
 
 class LoginPage extends StatefulWidget {
+  const LoginPage({super.key});
+
   @override
   State<LoginPage> createState() => _LoginPageState();
 }

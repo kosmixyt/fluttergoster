@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttergoster/pages/player_page.dart';
 import '../services/api_service.dart';
 import '../models/data_models.dart';
 import '../main.dart'; // For ApiServiceProvider
@@ -9,15 +10,17 @@ class TorrentInfoButton extends StatefulWidget {
   final bool hasFiles;
   final int? seasonNumber; // Keep this for display purposes
   final String? seasonId; // Added parameter for season ID
+  final dynamic sourceItem; // New parameter to pass movie or TV show data
 
   const TorrentInfoButton({
-    Key? key,
+    super.key,
     required this.itemId,
     required this.itemType,
     required this.hasFiles,
     this.seasonNumber,
-    this.seasonId, // New optional parameter
-  }) : super(key: key);
+    this.seasonId,
+    this.sourceItem, // Optional parameter for source item (MovieItem or TVItem)
+  });
 
   @override
   State<TorrentInfoButton> createState() => _TorrentInfoButtonState();
@@ -97,7 +100,15 @@ class _TorrentInfoButtonState extends State<TorrentInfoButton> {
 
     showDialog(
       context: context,
-      builder: (context) => TorrentDetailsDialog(torrents: _torrents!),
+      builder:
+          (context) => TorrentDetailsDialog(
+            torrents: _torrents!,
+            sourceItem: widget.sourceItem, // Pass the source item
+            itemType: widget.itemType,
+            itemId: widget.itemId,
+            seasonId: widget.seasonId,
+            seasonNumber: widget.seasonNumber,
+          ),
     );
   }
 
@@ -201,9 +212,21 @@ class _TorrentInfoButtonState extends State<TorrentInfoButton> {
 
 class TorrentDetailsDialog extends StatelessWidget {
   final List<AvailableTorrent> torrents;
+  final dynamic sourceItem; // Can be MovieItem, TVItem, or null
+  final String? itemType;
+  final String? itemId;
+  final String? seasonId;
+  final int? seasonNumber;
 
-  const TorrentDetailsDialog({Key? key, required this.torrents})
-    : super(key: key);
+  const TorrentDetailsDialog({
+    super.key,
+    required this.torrents,
+    this.sourceItem,
+    this.itemType,
+    this.itemId,
+    this.seasonId,
+    this.seasonNumber,
+  });
 
   // Helper function to format file size
   String _formatSize(int? sizeInBytes) {
@@ -575,41 +598,62 @@ class TorrentDetailsDialog extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 8),
-                            Flexible(
-                              flex: 0,
-                              child: OutlinedButton.icon(
-                                onPressed: null, // No action for now
-                                icon: const Icon(
-                                  Icons.play_arrow,
-                                  size: 18,
-                                  color: Colors.green,
-                                ),
-                                label: const Text(
-                                  "Streamer",
-                                  style: TextStyle(
+                            // Only show the streaming button for movies
+                            if (itemType == "movie")
+                              Flexible(
+                                flex: 0,
+                                child: OutlinedButton.icon(
+                                  onPressed: () {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) => PlayerPage(
+                                              transcodeUrl:
+                                                  (sourceItem.transcodeUrl) +
+                                                  "&torrent_id=${torrent.id}",
+                                              sourceItem:
+                                                  sourceItem, // Pass the source item
+                                              sourceItemId: itemId,
+                                              sourceItemType: itemType,
+                                              seasonId: seasonId,
+                                              seasonNumber: seasonNumber,
+                                              torrentInfo:
+                                                  torrent, // Pass torrent info as well
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  icon: const Icon(
+                                    Icons.play_arrow,
+                                    size: 18,
                                     color: Colors.green,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15,
-                                    letterSpacing: 0.2,
                                   ),
-                                ),
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.green,
-                                  side: BorderSide(
-                                    color: Colors.green[700]!,
-                                    width: 2,
+                                  label: const Text(
+                                    "Streamer",
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 15,
+                                      letterSpacing: 0.2,
+                                    ),
                                   ),
-                                  minimumSize: const Size(0, 38),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 10,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8),
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: Colors.green,
+                                    side: BorderSide(
+                                      color: Colors.green[700]!,
+                                      width: 2,
+                                    ),
+                                    minimumSize: const Size(0, 38),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 10,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
                           ],
                         ),
                       );
@@ -823,23 +867,42 @@ class TorrentDetailsDialog extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      IconButton(
-                        onPressed: null,
-                        icon: const Icon(Icons.play_arrow),
-                        style: IconButton.styleFrom(
-                          backgroundColor: Colors.grey[800],
-                          foregroundColor: Colors.green,
-                          minimumSize: const Size(42, 42),
-                          padding: EdgeInsets.zero,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            side: BorderSide(
-                              color: Colors.green[700]!,
-                              width: 2,
+                      // Only show the streaming icon button for movies
+                      if (itemType == "movie")
+                        IconButton(
+                          onPressed: () {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => PlayerPage(
+                                      transcodeUrl:
+                                          sourceItem.transcodeUrl +
+                                          "&torrent_id=${torrent.id}",
+                                      sourceItem: sourceItem,
+                                      sourceItemId: itemId,
+                                      sourceItemType: itemType,
+                                      seasonId: seasonId,
+                                      seasonNumber: seasonNumber,
+                                      torrentInfo: torrent,
+                                    ),
+                              ),
+                            );
+                          },
+                          icon: const Icon(Icons.play_arrow),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.grey[800],
+                            foregroundColor: Colors.green,
+                            minimumSize: const Size(42, 42),
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                              side: BorderSide(
+                                color: Colors.green[700]!,
+                                width: 2,
+                              ),
                             ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ],

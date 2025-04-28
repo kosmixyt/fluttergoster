@@ -9,10 +9,7 @@ import 'package:fluttergoster/widgets/media_card.dart';
 class BrowsePage extends StatefulWidget {
   final String mediaType; // "movie" or "tv"
 
-  const BrowsePage({
-    Key? key, 
-    required this.mediaType, 
-  }) : super(key: key);
+  const BrowsePage({super.key, required this.mediaType});
 
   @override
   State<BrowsePage> createState() => _BrowsePageState();
@@ -50,8 +47,10 @@ class _BrowsePageState extends State<BrowsePage> {
 
   void _onScroll() {
     // If we're near the bottom and not currently loading more items
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
-        !_isLoading && _displayedItems.length < _allItems.length) {
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
+        !_isLoading &&
+        _displayedItems.length < _allItems.length) {
       _addMoreItemsToDisplay();
     }
   }
@@ -67,7 +66,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
     try {
       final apiService = ApiServiceProvider.of(context);
-      
+
       // Using a large limit to get all items at once
       // In a real-world scenario, you might want to cap this or implement pagination
       // if the number of items could be extremely large
@@ -79,7 +78,7 @@ class _BrowsePageState extends State<BrowsePage> {
 
       setState(() {
         _allItems = allItems;
-        
+
         // Initially display only the first batch
         _displayedItems = allItems.take(_batchSize).toList();
         _isLoading = false;
@@ -108,7 +107,10 @@ class _BrowsePageState extends State<BrowsePage> {
     await Future.delayed(const Duration(milliseconds: 300));
 
     setState(() {
-      final newEndIndex = (_displayedItems.length + _batchSize).clamp(0, _allItems.length);
+      final newEndIndex = (_displayedItems.length + _batchSize).clamp(
+        0,
+        _allItems.length,
+      );
       _displayedItems = _allItems.sublist(0, newEndIndex);
       _isLoading = false;
     });
@@ -120,15 +122,22 @@ class _BrowsePageState extends State<BrowsePage> {
     _displayedItems = [];
     await _loadAllItems();
   }
-  
+
   @override
   Widget build(BuildContext context) {
-    // Calculate responsive grid layout
+    // Calculate responsive grid layout based on device size
     final screenWidth = MediaQuery.of(context).size.width;
-    final double desiredItemWidth = 100;
+    final isPhone = MediaQuery.of(context).size.shortestSide < 600;
+
+    // Increase desired width for better visibility, especially on mobile
+    final double desiredItemWidth = isPhone ? 150 : 180;
+
+    // Allow fewer items per row on smaller screens
     int crossAxisCount = (screenWidth / desiredItemWidth).floor();
-    crossAxisCount = crossAxisCount.clamp(3, 8);
-    final itemWidth = (screenWidth - 32 - (16 * (crossAxisCount - 1))) / crossAxisCount;
+    crossAxisCount = crossAxisCount.clamp(isPhone ? 2 : 3, 6);
+
+    final itemWidth =
+        (screenWidth - 32 - (16 * (crossAxisCount - 1))) / crossAxisCount;
 
     return Scaffold(
       appBar: GosterTopBar(
@@ -140,57 +149,63 @@ class _BrowsePageState extends State<BrowsePage> {
         onRefresh: _refreshItems,
         color: Colors.blue,
         backgroundColor: Colors.grey[900],
-        child: _isInitialLoad
-            ? const Center(child: CircularProgressIndicator())
-            : _allItems.isEmpty
+        child:
+            _isInitialLoad
+                ? const Center(child: CircularProgressIndicator())
+                : _allItems.isEmpty
                 ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.search_off, size: 50, color: Colors.grey),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Aucun contenu trouvé',
-                          style: TextStyle(color: Colors.grey[400], fontSize: 16),
-                        ),
-                        const SizedBox(height: 8),
-                        TextButton(
-                          onPressed: _loadAllItems,
-                          child: const Text('Réessayer'),
-                        ),
-                      ],
-                    ),
-                  )
-                : GridView.builder(
-                    controller: _scrollController,
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: crossAxisCount,
-                      childAspectRatio: 2/3,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
-                    itemCount: _displayedItems.length + 
-                              (_displayedItems.length < _allItems.length ? 1 : 0),
-                    itemBuilder: (context, index) {
-                      // Display loading indicator at the end
-                      if (index >= _displayedItems.length) {
-                        return const Center(
-                          child: Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: CircularProgressIndicator(),
-                          ),
-                        );
-                      }
-                      
-                      // Display media card
-                      final item = _displayedItems[index];
-                      return MediaCard(
-                        media: item,
-                        displayMode: MediaCardDisplayMode.poster,
-                      );
-                    },
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.search_off,
+                        size: 50,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Aucun contenu trouvé',
+                        style: TextStyle(color: Colors.grey[400], fontSize: 16),
+                      ),
+                      const SizedBox(height: 8),
+                      TextButton(
+                        onPressed: _loadAllItems,
+                        child: const Text('Réessayer'),
+                      ),
+                    ],
                   ),
+                )
+                : GridView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: crossAxisCount,
+                    childAspectRatio: 2 / 3,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount:
+                      _displayedItems.length +
+                      (_displayedItems.length < _allItems.length ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    // Display loading indicator at the end
+                    if (index >= _displayedItems.length) {
+                      return const Center(
+                        child: Padding(
+                          padding: EdgeInsets.all(16.0),
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    // Display media card
+                    final item = _displayedItems[index];
+                    return MediaCard(
+                      media: item,
+                      displayMode: MediaCardDisplayMode.poster,
+                    );
+                  },
+                ),
       ),
     );
   }
