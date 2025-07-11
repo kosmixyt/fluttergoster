@@ -85,10 +85,9 @@ class _ContentRequestModalState extends State<ContentRequestModal> {
     try {
       var goodSize = _selectedSize! * 1024 * 1024 * 1024;
       print("selected size: $goodSize bytes");
-      final response = await widget.apiService.sendContentRequest(
-        maxSize: goodSize, // Convert GB to bytesj
-        itemId: widget.itemId,
-        itemType: widget.itemType,
+      await widget.apiService.sendContentRequest(
+        widget.itemId,
+        widget.itemType,
         seasonId: widget.seasonId,
       );
 

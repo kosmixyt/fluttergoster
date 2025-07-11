@@ -1,13 +1,36 @@
 import 'package:flutter/material.dart';
 import 'package:fluttergoster/pages/player_page.dart';
-import 'package:media_kit/media_kit.dart';
-import '../services/api_service.dart';
 import '../main.dart';
 import '../models/data_models.dart';
 import '../widgets/cookie_image.dart';
 import '../widgets/media_card.dart';
 import '../widgets/goster_top_bar.dart';
 import 'package:fluttergoster/pages/media_details_page.dart';
+
+// Constantes pour les espacements
+const double kVerticalSpacing = 8.0;
+const double kBottomPadding = 0.0;
+const double kProviderSectionPadding = 16.0;
+const double kFeaturedBottomMargin = 4.0;
+
+// Constantes pour les tailles
+const double kDesktopBreakpoint = 900.0;
+const double kTabletBreakpoint = 600.0;
+const double kIconButtonSize = 40.0;
+const double kPaginationDotSize = 8.0;
+const double kPaginationDotSpacing = 4.0;
+
+// Constantes pour les opacités et rayons
+const double kOverlayOpacity = 0.7;
+const double kBlurRadius = 8.0;
+const double kBorderRadius = 8.0;
+const double kCardElevation = 2.0;
+const int kAnimationDuration = 200;
+
+// Constantes pour les dimensions du Top Ten
+const double kTopTenItemWidth = 220.0;
+const double kTopTenHeight = 290.0;
+const double kTopTenLeftOffset = 50.0;
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -90,51 +113,97 @@ class NetflixStyleHome extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
-      children: [
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth > kDesktopBreakpoint;
+    final isTablet =
+        screenWidth > kTabletBreakpoint && screenWidth <= kDesktopBreakpoint;
+
+    return CustomScrollView(
+      slivers: [
+        // Featured content section
         if (homeData.recents.data.isNotEmpty)
-          FeaturedContentSection(skinnyRender: homeData.recents.data.first),
-        ContentRow(
-          title: homeData.recents.title,
-          items: homeData.recents.data,
-          displayMode: MediaCardDisplayMode.backdrop,
-          isWatchingRow:
-              homeData.recents.title.contains("Watching") ||
-              homeData.recents.title.contains("Regarder"),
-        ),
-        ...homeData.lines.asMap().entries.map((entry) {
-          int index = entry.key;
-          LineRender line = entry.value;
-
-          bool isWatchingRow =
-              line.title.contains("Watching") ||
-              line.title.contains("Regarder");
-
-          if (index == 2 && line.data.isNotEmpty) {
-            return TopTenRow(
-              title: "Top 10 Today",
-              items: line.data.take(10).toList(),
-            );
-          }
-
-          return line.data.isNotEmpty
-              ? ContentRow(
-                title: line.title,
-                items: line.data,
-                displayMode:
-                    index % 2 == 0
-                        ? MediaCardDisplayMode.poster
-                        : MediaCardDisplayMode.backdrop,
-                isWatchingRow: isWatchingRow,
-              )
-              : const SizedBox();
-        }),
-        if (homeData.providers.isNotEmpty)
-          ProviderRow(
-            title: homeData.providers.first.title,
-            providers: homeData.providers.first.data,
+          SliverToBoxAdapter(
+            child: FeaturedContentSection(
+              skinnyRender: homeData.recents.data.first,
+              isDesktop: isDesktop,
+            ),
           ),
-        const SizedBox(height: 20),
+
+        // Main content with better spacing for desktop
+        SliverPadding(
+          padding: EdgeInsets.symmetric(
+            horizontal: isDesktop ? 24 : (isTablet ? 16 : 12),
+          ),
+          sliver: SliverList(
+            delegate: SliverChildListDelegate([
+              const SizedBox(height: kVerticalSpacing),
+
+              // Recent/Continue watching row
+              if (homeData.recents.data.isNotEmpty)
+                ContentRow(
+                  title: homeData.recents.title,
+                  items: homeData.recents.data,
+                  displayMode: MediaCardDisplayMode.backdrop,
+                  isWatchingRow:
+                      homeData.recents.title.contains("Watching") ||
+                      homeData.recents.title.contains("Regarder"),
+                  isDesktop: isDesktop,
+                ),
+
+              const SizedBox(height: kVerticalSpacing),
+
+              // Dynamic content rows
+              ...homeData.lines.asMap().entries.map((entry) {
+                int index = entry.key;
+                LineRender line = entry.value;
+
+                bool isWatchingRow =
+                    line.title.contains("Watching") ||
+                    line.title.contains("Regarder");
+
+                if (index == 2 && line.data.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: kBottomPadding),
+                    child: TopTenRow(
+                      title: "Top 10 Today",
+                      items: line.data.take(10).toList(),
+                      isDesktop: isDesktop,
+                    ),
+                  );
+                }
+
+                return line.data.isNotEmpty
+                    ? Padding(
+                      padding: const EdgeInsets.only(bottom: kBottomPadding),
+                      child: ContentRow(
+                        title: line.title,
+                        items: line.data,
+                        displayMode:
+                            index % 2 == 0
+                                ? MediaCardDisplayMode.poster
+                                : MediaCardDisplayMode.backdrop,
+                        isWatchingRow: isWatchingRow,
+                        isDesktop: isDesktop,
+                      ),
+                    )
+                    : const SizedBox();
+              }),
+
+              // Providers section
+              if (homeData.providers.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    bottom: kProviderSectionPadding,
+                  ),
+                  child: ProviderRow(
+                    title: homeData.providers.first.title,
+                    providers: homeData.providers.first.data,
+                    isDesktop: isDesktop,
+                  ),
+                ),
+            ]),
+          ),
+        ),
       ],
     );
   }
@@ -142,16 +211,26 @@ class NetflixStyleHome extends StatelessWidget {
 
 class FeaturedContentSection extends StatelessWidget {
   final SkinnyRender skinnyRender;
+  final bool isDesktop;
 
-  const FeaturedContentSection({super.key, required this.skinnyRender});
+  const FeaturedContentSection({
+    super.key,
+    required this.skinnyRender,
+    this.isDesktop = false,
+  });
 
   @override
   Widget build(BuildContext context) {
+    final double screenHeight = MediaQuery.of(context).size.height;
+    final double height = screenHeight * 0.8;
+    final double horizontalPadding = isDesktop ? 24 : 16;
+
     return Container(
-      height: 400,
-      margin: const EdgeInsets.only(bottom: 10),
+      height: height,
+      margin: const EdgeInsets.only(bottom: kFeaturedBottomMargin),
       child: Stack(
         children: [
+          // Background image with better quality scaling
           Positioned.fill(
             child: CookieImage(
               imageUrl: skinnyRender.backdrop,
@@ -161,102 +240,138 @@ class FeaturedContentSection extends StatelessWidget {
                       Container(color: Colors.grey[900]),
             ),
           ),
+
+          // Enhanced gradient overlay
           Positioned.fill(
             child: Container(
               decoration: BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black.withOpacity(0.8)],
+                  stops: const [0.0, 0.4, 0.7, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withOpacity(0.1),
+                    Colors.black.withOpacity(0.6),
+                    Colors.black.withOpacity(0.9),
+                  ],
                 ),
               ),
             ),
           ),
+
+          // Content positioned better for desktop
           Positioned(
-            bottom: 20,
-            left: 20,
-            right: 20,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (skinnyRender.logo.isNotEmpty)
-                  Container(
-                    height: 60,
-                    margin: const EdgeInsets.only(bottom: 10),
-                    child: CookieImage(
-                      imageUrl: skinnyRender.logo,
-                      errorBuilder:
-                          (context, error, stackTrace) => Text(
-                            skinnyRender.name,
-                            style: const TextStyle(
-                              fontSize: 24,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+            bottom: isDesktop ? 40 : 16,
+            left: horizontalPadding,
+            right: horizontalPadding,
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                maxWidth: isDesktop ? 600 : double.infinity,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (skinnyRender.logo.isNotEmpty)
+                    Container(
+                      height: isDesktop ? 80 : 60,
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: CookieImage(
+                        imageUrl: skinnyRender.logo,
+                        errorBuilder:
+                            (context, error, stackTrace) => Text(
+                              skinnyRender.name,
+                              style: TextStyle(
+                                fontSize: isDesktop ? 32 : 24,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          ),
+                      ),
+                    )
+                  else
+                    Text(
+                      skinnyRender.name,
+                      style: TextStyle(
+                        fontSize: isDesktop ? 32 : 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  )
-                else
+                  const SizedBox(height: 12),
                   Text(
-                    skinnyRender.name,
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    skinnyRender.description,
+                    maxLines: isDesktop ? 3 : 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: isDesktop ? 16 : 14,
+                      height: 1.4,
                     ),
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  skinnyRender.description,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => PlayerPage(
-                                  transcodeUrl: skinnyRender.transcodeUrl,
-                                ),
+                  const SizedBox(height: 20),
+                  Row(
+                    children: [
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => PlayerPage(
+                                    transcodeUrl: skinnyRender.transcodeUrl,
+                                  ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.play_arrow),
+                        label: const Text('Lecture'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 24 : 16,
+                            vertical: isDesktop ? 12 : 8,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.play_arrow),
-                      label: const Text('Lecture'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => MediaDetailsPage(
-                                  mediaId: skinnyRender.id,
-                                  mediaType: skinnyRender.type,
-                                ),
+                          textStyle: TextStyle(
+                            fontSize: isDesktop ? 16 : 14,
+                            fontWeight: FontWeight.w600,
                           ),
-                        );
-                      },
-                      icon: const Icon(Icons.info_outline),
-                      label: const Text('Infos'),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.white,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                      const SizedBox(width: 12),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (context) => MediaDetailsPage(
+                                    mediaId: skinnyRender.id,
+                                    mediaType: skinnyRender.type,
+                                  ),
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.info_outline),
+                        label: const Text('Infos'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.white,
+                          side: const BorderSide(color: Colors.white),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: isDesktop ? 24 : 16,
+                            vertical: isDesktop ? 12 : 8,
+                          ),
+                          textStyle: TextStyle(
+                            fontSize: isDesktop ? 16 : 14,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         ],
@@ -270,6 +385,7 @@ class ContentRow extends StatefulWidget {
   final List<SkinnyRender> items;
   final MediaCardDisplayMode displayMode;
   final bool isWatchingRow;
+  final bool isDesktop;
 
   const ContentRow({
     super.key,
@@ -277,6 +393,7 @@ class ContentRow extends StatefulWidget {
     required this.items,
     this.displayMode = MediaCardDisplayMode.poster,
     this.isWatchingRow = false,
+    this.isDesktop = false,
   });
 
   @override
@@ -296,11 +413,30 @@ class _ContentRowState extends State<ContentRow> {
 
   int get _itemsPerPage {
     final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth =
-        widget.displayMode == MediaCardDisplayMode.backdrop
-            ? 300.0 + 16.0
-            : 150.0 + 16.0;
-    return (screenWidth / itemWidth).floor();
+    final baseItemWidth =
+        widget.displayMode == MediaCardDisplayMode.backdrop ? 300.0 : 150.0;
+    final spacing = 16.0;
+
+    // Responsive item width calculation
+    double itemWidth;
+    if (widget.isDesktop) {
+      itemWidth =
+          widget.displayMode == MediaCardDisplayMode.backdrop ? 320.0 : 180.0;
+    } else if (screenWidth > 600) {
+      itemWidth =
+          widget.displayMode == MediaCardDisplayMode.backdrop ? 280.0 : 160.0;
+    } else {
+      itemWidth = baseItemWidth;
+    }
+
+    final totalItemWidth = itemWidth + spacing;
+    final availableWidth =
+        screenWidth - (widget.isDesktop ? 96 : 32); // Account for padding
+
+    return (availableWidth / totalItemWidth).floor().clamp(
+      2,
+      widget.isDesktop ? 8 : 6,
+    );
   }
 
   @override
@@ -352,7 +488,6 @@ class _ContentRowState extends State<ContentRow> {
 
   void _scrollToPage(int page) {
     if (page >= 0 && page < _totalPages) {
-      final perPage = _itemsPerPage;
       final maxScrollExtent = _scrollController.position.maxScrollExtent;
       final targetScroll = maxScrollExtent * page / (_totalPages - 1);
       _scrollController.animateTo(
@@ -459,7 +594,7 @@ class _ContentRowState extends State<ContentRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(12, 6, 12, 3),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -506,7 +641,9 @@ class _ContentRowState extends State<ContentRow> {
                                 ),
                                 alignment: Alignment.center,
                                 child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 200),
+                                  duration: const Duration(
+                                    milliseconds: kAnimationDuration,
+                                  ),
                                   curve: Curves.easeInOut,
                                   transform:
                                       _hoveredIndex == index
@@ -518,39 +655,19 @@ class _ContentRowState extends State<ContentRow> {
                                   child: Stack(
                                     clipBehavior: Clip.none,
                                     children: [
-                                      Container(
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            8,
-                                          ),
-                                          boxShadow:
-                                              _hoveredIndex == index
-                                                  ? [
-                                                    BoxShadow(
-                                                      color: Colors.blue
-                                                          .withOpacity(0.5),
-                                                      blurRadius: 10,
-                                                      spreadRadius: 2,
-                                                    ),
-                                                  ]
-                                                  : [],
-                                        ),
-                                        child: MediaCard(
-                                          media: item,
-                                          displayMode: widget.displayMode,
-                                          height:
-                                              widget.displayMode ==
-                                                      MediaCardDisplayMode
-                                                          .poster
-                                                  ? 220
-                                                  : 170,
-                                          width:
-                                              widget.displayMode ==
-                                                      MediaCardDisplayMode
-                                                          .poster
-                                                  ? 150
-                                                  : 300,
-                                        ),
+                                      MediaCard(
+                                        media: item,
+                                        displayMode: widget.displayMode,
+                                        height:
+                                            widget.displayMode ==
+                                                    MediaCardDisplayMode.poster
+                                                ? 220
+                                                : 170,
+                                        width:
+                                            widget.displayMode ==
+                                                    MediaCardDisplayMode.poster
+                                                ? 150
+                                                : 300,
                                       ),
                                       if (widget.isWatchingRow &&
                                           _hoveredIndex == index)
@@ -560,7 +677,7 @@ class _ContentRowState extends State<ContentRow> {
                                           child: Container(
                                             decoration: BoxDecoration(
                                               color: Colors.black.withOpacity(
-                                                0.7,
+                                                kOverlayOpacity,
                                               ),
                                               shape: BoxShape.circle,
                                             ),
@@ -611,8 +728,8 @@ class _ContentRowState extends State<ContentRow> {
                   bottom: 0,
                   child: Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: kIconButtonSize,
+                      height: kIconButtonSize,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         shape: BoxShape.circle,
@@ -644,8 +761,8 @@ class _ContentRowState extends State<ContentRow> {
                   bottom: 0,
                   child: Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: kIconButtonSize,
+                      height: kIconButtonSize,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         shape: BoxShape.circle,
@@ -681,9 +798,11 @@ class _ContentRowState extends State<ContentRow> {
                   return GestureDetector(
                     onTap: () => _scrollToPage(index),
                     child: Container(
-                      width: 8,
-                      height: 8,
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
+                      width: kPaginationDotSize,
+                      height: kPaginationDotSize,
+                      margin: const EdgeInsets.symmetric(
+                        horizontal: kPaginationDotSpacing,
+                      ),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color:
@@ -705,8 +824,14 @@ class _ContentRowState extends State<ContentRow> {
 class ProviderRow extends StatelessWidget {
   final String title;
   final List<Provider> providers;
+  final bool isDesktop;
 
-  const ProviderRow({super.key, required this.title, required this.providers});
+  const ProviderRow({
+    super.key,
+    required this.title,
+    required this.providers,
+    this.isDesktop = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -714,51 +839,66 @@ class ProviderRow extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          padding: const EdgeInsets.only(bottom: 12),
           child: Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: isDesktop ? 22 : 18,
               fontWeight: FontWeight.bold,
+              letterSpacing: 0.5,
             ),
           ),
         ),
         SizedBox(
-          height: 80,
+          height: isDesktop ? 100 : 80,
           child: ListView.builder(
-            padding: const EdgeInsets.symmetric(horizontal: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 4),
             scrollDirection: Axis.horizontal,
+            physics: const BouncingScrollPhysics(),
             itemCount: providers.length,
             itemBuilder: (context, index) {
               final provider = providers[index];
               return Container(
-                width: 120,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
+                width: isDesktop ? 140 : 120,
+                margin: const EdgeInsets.only(right: 16),
                 child: InkWell(
                   onTap: () {
                     // Action quand on clique sur un provider
                   },
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Flexible(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white12,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Center(
-                            child: Text(
-                              provider.providerName,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(color: Colors.white),
-                            ),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: Colors.white.withOpacity(0.1),
+                        width: 1,
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.tv,
+                          color: Colors.white70,
+                          size: isDesktop ? 24 : 20,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          provider.providerName,
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: isDesktop ? 14 : 12,
+                            fontWeight: FontWeight.w500,
                           ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               );
@@ -773,8 +913,14 @@ class ProviderRow extends StatelessWidget {
 class TopTenRow extends StatefulWidget {
   final String title;
   final List<SkinnyRender> items;
+  final bool isDesktop;
 
-  const TopTenRow({super.key, required this.title, required this.items});
+  const TopTenRow({
+    super.key,
+    required this.title,
+    required this.items,
+    this.isDesktop = false,
+  });
 
   @override
   State<TopTenRow> createState() => _TopTenRowState();
@@ -807,7 +953,7 @@ class _TopTenRowState extends State<TopTenRow> {
 
   void _calculateTotalPages() {
     final screenWidth = MediaQuery.of(context).size.width;
-    final itemWidth = 220.0; // Width of each item in the carousel
+    final itemWidth = kTopTenItemWidth; // Width of each item in the carousel
     final itemsPerPage = (screenWidth / itemWidth).floor();
 
     if (widget.items.isEmpty || itemsPerPage <= 0) {
@@ -869,7 +1015,7 @@ class _TopTenRowState extends State<TopTenRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
+            padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
             child: Text(
               widget.title,
               style: const TextStyle(
@@ -882,7 +1028,7 @@ class _TopTenRowState extends State<TopTenRow> {
           Stack(
             children: [
               SizedBox(
-                height: 290,
+                height: kTopTenHeight,
                 child: ListView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -899,7 +1045,9 @@ class _TopTenRowState extends State<TopTenRow> {
                         margin: const EdgeInsets.only(bottom: 10),
                         alignment: Alignment.center,
                         child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
+                          duration: const Duration(
+                            milliseconds: kAnimationDuration,
+                          ),
                           curve: Curves.easeInOut,
                           transform:
                               _hoveredIndex == index
@@ -912,28 +1060,17 @@ class _TopTenRowState extends State<TopTenRow> {
                             clipBehavior: Clip.none,
                             children: [
                               Padding(
-                                padding: const EdgeInsets.fromLTRB(50, 0, 8, 0),
-                                child: Container(
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(8),
-                                    boxShadow:
-                                        _hoveredIndex == index
-                                            ? [
-                                              BoxShadow(
-                                                color: Colors.red.shade700
-                                                    .withOpacity(0.5),
-                                                blurRadius: 12,
-                                                spreadRadius: 2,
-                                              ),
-                                            ]
-                                            : [],
-                                  ),
-                                  child: MediaCard(
-                                    media: item,
-                                    displayMode: MediaCardDisplayMode.poster,
-                                    height: 240,
-                                    width: 160,
-                                  ),
+                                padding: const EdgeInsets.fromLTRB(
+                                  kTopTenLeftOffset,
+                                  0,
+                                  6,
+                                  0,
+                                ),
+                                child: MediaCard(
+                                  media: item,
+                                  displayMode: MediaCardDisplayMode.poster,
+                                  height: 240,
+                                  width: 160,
                                 ),
                               ),
                               Positioned(
@@ -979,8 +1116,8 @@ class _TopTenRowState extends State<TopTenRow> {
                   bottom: 0,
                   child: Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: kIconButtonSize,
+                      height: kIconButtonSize,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         shape: BoxShape.circle,
@@ -1012,8 +1149,8 @@ class _TopTenRowState extends State<TopTenRow> {
                   bottom: 0,
                   child: Center(
                     child: Container(
-                      width: 40,
-                      height: 40,
+                      width: kIconButtonSize,
+                      height: kIconButtonSize,
                       decoration: BoxDecoration(
                         color: Colors.black.withOpacity(0.7),
                         shape: BoxShape.circle,
@@ -1047,9 +1184,11 @@ class _TopTenRowState extends State<TopTenRow> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(_totalPages, (index) {
                   return Container(
-                    width: 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    width: kPaginationDotSize,
+                    height: kPaginationDotSize,
+                    margin: const EdgeInsets.symmetric(
+                      horizontal: kPaginationDotSpacing,
+                    ),
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color:

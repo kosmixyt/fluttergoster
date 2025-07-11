@@ -3,10 +3,9 @@ import 'dart:developer';
 import 'dart:typed_data';
 import 'package:flutter_client_sse/constants/sse_request_type_enum.dart';
 import 'package:fluttergoster/models/data_models.dart';
+import 'package:fluttergoster/models/torrent_result.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_client_sse/flutter_client_sse.dart';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:media_kit/generated/libmpv/bindings.dart';
 import 'dart:async';
 
 // Remove the problematic import and use our platform-specific clients
@@ -667,15 +666,55 @@ class ApiService {
     }
   }
 
-  /// Envoyer une demande pour un nouveau contenu
-  Future<Map<String, dynamic>> sendContentRequest({
-    required int maxSize,
-    required String itemId,
-    required String itemType,
+  /// Recherche des torrents avec une requête
+  Future<List<TorrentResult>> searchTorrents(String query) async {
+    final url = Uri.parse('$baseUrl/torrents/search?q=$query');
+    final client = _getClient();
+
+    final response = await client.get(url, headers: _addCookiesToHeaders());
+
+    if (response.statusCode == 200) {
+      final List<dynamic> jsonData = json.decode(response.body);
+      return jsonData.map((item) => TorrentResult.fromJson(item)).toList();
+    } else {
+      throw Exception('Failed to search torrents: ${response.statusCode}');
+    }
+  }
+
+  /// Ajouter un torrent à partir d'un lien
+  Future<Map<String, dynamic>> addTorrent({
+    required String torrentLink,
+    required String mediaType,
+    required String mediaUuid,
+  }) async {
+    final url = Uri.parse('$baseUrl/torrents/add');
+    final client = _getClient();
+
+    var request = http.MultipartRequest('POST', url);
+    request.fields['addMethod'] = 'search';
+    request.fields['torrentId'] = torrentLink;
+    request.fields['mediaType'] = mediaType;
+    request.fields['mediauuid'] = mediaUuid;
+
+    request.headers.addAll(_addCookiesToHeaders());
+
+    var streamedResponse = await client.send(request);
+    var response = await http.Response.fromStream(streamedResponse);
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    } else {
+      throw Exception('Failed to add torrent: ${response.statusCode}');
+    }
+  }
+
+  /// Envoie une requête de contenu pour un film/série
+  Future<Map<String, dynamic>> sendContentRequest(
+    String itemId,
+    String itemType, {
     int? seasonId,
   }) async {
-    String url =
-        '$baseUrl/request/new?max_size=$maxSize&id=$itemId&type=$itemType';
+    String url = '$baseUrl/request/new?id=$itemId&type=$itemType';
 
     // Add season_id if we're requesting a TV show and seasonId is provided
     if (itemType == 'tv' && seasonId != null) {

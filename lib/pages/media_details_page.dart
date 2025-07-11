@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart'; // Add this import for clipboard functionality
+import 'dart:ui'; // Add this import for ImageFilter
 import 'package:fluttergoster/pages/player_page.dart';
 import 'package:fluttergoster/widgets/content_request_modal.dart';
-import '../services/api_service.dart';
+import 'package:fluttergoster/widgets/torrent_search_modal.dart';
 import '../main.dart';
 import '../models/data_models.dart';
 import '../widgets/cookie_image.dart';
 import '../widgets/goster_top_bar.dart';
-import '../pages/home_page.dart';
 import 'package:fluttergoster/widgets/media_card.dart';
 import '../widgets/torrent_info_button.dart'; // Ajout de l'import
 
@@ -251,29 +251,42 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
     try {
       final selectedFile =
           movie.files.isNotEmpty ? movie.files[_selectedFileIndex] : null;
-      final runtimeMinutes = movie.runtime.isNotEmpty ? movie.runtime : 'N/A';
+      final runtimeMinutes = movie.runtime;
 
       return Scaffold(
         backgroundColor: Colors.black,
         appBar: const GosterTopBar(showBackButton: true),
         body: Stack(
           children: [
-            if (MediaQuery.of(context).size.width > 800)
-              Positioned(
-                left: 0,
-                top: 0,
-                bottom: 0,
-                child: SizedBox(
-                  width: MediaQuery.of(context).size.width * 0.25,
-                  child: CookieImage(
-                    imageUrl: movie.poster,
+            // Backdrop en plein écran avec flou noir
+            Positioned.fill(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  CookieImage(
+                    imageUrl: movie.backdrop,
                     fit: BoxFit.cover,
                     errorBuilder:
                         (context, error, stackTrace) =>
                             Container(color: Colors.grey[900]),
                   ),
-                ),
+                  // Overlay avec flou noir pour la lisibilité
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.75),
+                    ),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 15.0, sigmaY: 15.0),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
+            ),
 
             CustomScrollView(
               slivers: [
@@ -298,9 +311,12 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                             gradient: LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
+                              stops: const [0.0, 0.4, 0.8, 1.0],
                               colors: [
                                 Colors.transparent,
-                                Colors.black.withOpacity(0.9),
+                                Colors.black.withOpacity(0.3),
+                                Colors.black.withOpacity(0.7),
+                                Colors.black.withOpacity(0.95),
                               ],
                             ),
                           ),
@@ -314,7 +330,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                     padding: EdgeInsets.only(
                       left:
                           MediaQuery.of(context).size.width > 800
-                              ? MediaQuery.of(context).size.width * 0.28
+                              ? MediaQuery.of(context).size.width * 0.25
                               : 24.0,
                       right: 24.0,
                       top: 8.0,
@@ -323,12 +339,355 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- INFOS ---
+                        // --- NOUVEAU POSTER DESIGN ---
+                        if (MediaQuery.of(context).size.width <= 800)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 32),
+                            child: Stack(
+                              children: [
+                                // Carte principale avec effet glassmorphism
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        Colors.white.withOpacity(0.1),
+                                        Colors.white.withOpacity(0.05),
+                                      ],
+                                    ),
+                                    borderRadius: BorderRadius.circular(24),
+                                    border: Border.all(
+                                      color: Colors.white.withOpacity(0.2),
+                                      width: 1,
+                                    ),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.3),
+                                        spreadRadius: 0,
+                                        blurRadius: 20,
+                                        offset: const Offset(0, 10),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Poster amélioré avec effet 3D
+                                      Container(
+                                        width: 140,
+                                        height: 210,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.6,
+                                              ),
+                                              spreadRadius: 0,
+                                              blurRadius: 25,
+                                              offset: const Offset(0, 15),
+                                            ),
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withOpacity(0.3),
+                                              spreadRadius: 0,
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 5),
+                                            ),
+                                          ],
+                                        ),
+                                        child: Stack(
+                                          children: [
+                                            ClipRRect(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              child: CookieImage(
+                                                imageUrl: movie.poster,
+                                                fit: BoxFit.cover,
+                                                errorBuilder:
+                                                    (
+                                                      context,
+                                                      error,
+                                                      stackTrace,
+                                                    ) => Container(
+                                                      decoration: BoxDecoration(
+                                                        gradient: LinearGradient(
+                                                          begin:
+                                                              Alignment.topLeft,
+                                                          end:
+                                                              Alignment
+                                                                  .bottomRight,
+                                                          colors: [
+                                                            Colors.grey[800]!,
+                                                            Colors.grey[900]!,
+                                                          ],
+                                                        ),
+                                                      ),
+                                                      child: const Center(
+                                                        child: Icon(
+                                                          Icons.movie_outlined,
+                                                          size: 64,
+                                                          color: Colors.white30,
+                                                        ),
+                                                      ),
+                                                    ),
+                                              ),
+                                            ),
+                                            // Effet brillance
+                                            Container(
+                                              decoration: BoxDecoration(
+                                                borderRadius:
+                                                    BorderRadius.circular(16),
+                                                gradient: LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    Colors.white.withOpacity(
+                                                      0.2,
+                                                    ),
+                                                    Colors.transparent,
+                                                    Colors.transparent,
+                                                    Colors.black.withOpacity(
+                                                      0.1,
+                                                    ),
+                                                  ],
+                                                  stops: const [
+                                                    0.0,
+                                                    0.3,
+                                                    0.7,
+                                                    1.0,
+                                                  ],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 20),
+                                      // Informations avec nouveau design
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const SizedBox(height: 12),
+                                            // Badge année avec gradient
+                                            if (movie.year > 0)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 16,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  gradient:
+                                                      const LinearGradient(
+                                                        colors: [
+                                                          Color(0xFF6366F1),
+                                                          Color(0xFF3B82F6),
+                                                        ],
+                                                      ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(25),
+                                                  boxShadow: [
+                                                    BoxShadow(
+                                                      color: const Color(
+                                                        0xFF3B82F6,
+                                                      ).withOpacity(0.4),
+                                                      spreadRadius: 0,
+                                                      blurRadius: 12,
+                                                      offset: const Offset(
+                                                        0,
+                                                        4,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                                child: Text(
+                                                  movie.year.toString(),
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            const SizedBox(height: 16),
+                                            // Note avec étoiles améliorées
+                                            if (movie.voteAverage > 0)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.amber
+                                                      .withOpacity(0.1),
+                                                  borderRadius:
+                                                      BorderRadius.circular(20),
+                                                  border: Border.all(
+                                                    color: Colors.amber
+                                                        .withOpacity(0.3),
+                                                    width: 1,
+                                                  ),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.star_rounded,
+                                                      color: Colors.amber[400],
+                                                      size: 18,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      movie.voteAverage
+                                                          .toString(),
+                                                      style: TextStyle(
+                                                        color:
+                                                            Colors.amber[300],
+                                                        fontSize: 14,
+                                                        fontWeight:
+                                                            FontWeight.bold,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(width: 4),
+                                                    Text(
+                                                      '/10',
+                                                      style: TextStyle(
+                                                        color:
+                                                            Colors.amber[200],
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            const SizedBox(height: 12),
+                                            // Durée avec icône améliorée
+                                            if (movie.runtime > 0)
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 6,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.grey[700]!
+                                                      .withOpacity(0.3),
+                                                  borderRadius:
+                                                      BorderRadius.circular(15),
+                                                ),
+                                                child: Row(
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.schedule_rounded,
+                                                      color: Colors.grey[300],
+                                                      size: 16,
+                                                    ),
+                                                    const SizedBox(width: 6),
+                                                    Text(
+                                                      '${movie.runtime} min',
+                                                      style: TextStyle(
+                                                        color: Colors.grey[300],
+                                                        fontSize: 13,
+                                                        fontWeight:
+                                                            FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              ),
+                                            const SizedBox(height: 16),
+                                            // Genres avec meilleur design
+                                            if (movie.genre.isNotEmpty)
+                                              Wrap(
+                                                spacing: 6.0,
+                                                runSpacing: 6.0,
+                                                children:
+                                                    movie.genre
+                                                        .take(3)
+                                                        .map(
+                                                          (genre) => Container(
+                                                            padding:
+                                                                const EdgeInsets.symmetric(
+                                                                  horizontal:
+                                                                      12,
+                                                                  vertical: 6,
+                                                                ),
+                                                            decoration: BoxDecoration(
+                                                              gradient: LinearGradient(
+                                                                colors: [
+                                                                  Colors
+                                                                      .grey[800]!
+                                                                      .withOpacity(
+                                                                        0.7,
+                                                                      ),
+                                                                  Colors
+                                                                      .grey[900]!
+                                                                      .withOpacity(
+                                                                        0.5,
+                                                                      ),
+                                                                ],
+                                                              ),
+                                                              borderRadius:
+                                                                  BorderRadius.circular(
+                                                                    15,
+                                                                  ),
+                                                              border: Border.all(
+                                                                color: Colors
+                                                                    .grey[600]!
+                                                                    .withOpacity(
+                                                                      0.3,
+                                                                    ),
+                                                                width: 1,
+                                                              ),
+                                                            ),
+                                                            child: Text(
+                                                              genre.name,
+                                                              style: const TextStyle(
+                                                                color:
+                                                                    Colors
+                                                                        .white70,
+                                                                fontSize: 11,
+                                                                fontWeight:
+                                                                    FontWeight
+                                                                        .w500,
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+
+                        // --- TITRE PRINCIPAL ---
                         Center(
                           child:
                               movie.logo.isNotEmpty
                                   ? SizedBox(
-                                    height: 100,
+                                    height:
+                                        MediaQuery.of(context).size.width <= 800
+                                            ? 80
+                                            : 100,
                                     child: CookieImage(
                                       imageUrl: movie.logo,
                                       fit: BoxFit.contain,
@@ -336,8 +695,14 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                           (context, error, stackTrace) => Text(
                                             movie.displayName.toUpperCase(),
                                             textAlign: TextAlign.center,
-                                            style: const TextStyle(
-                                              fontSize: 48,
+                                            style: TextStyle(
+                                              fontSize:
+                                                  MediaQuery.of(
+                                                            context,
+                                                          ).size.width <=
+                                                          800
+                                                      ? 32
+                                                      : 48,
                                               fontWeight: FontWeight.w800,
                                               color: Colors.white,
                                               letterSpacing: 2.0,
@@ -349,8 +714,12 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                   : Text(
                                     movie.displayName.toUpperCase(),
                                     textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontSize: 48,
+                                    style: TextStyle(
+                                      fontSize:
+                                          MediaQuery.of(context).size.width <=
+                                                  800
+                                              ? 32
+                                              : 48,
                                       fontWeight: FontWeight.w800,
                                       color: Colors.white,
                                       letterSpacing: 2.0,
@@ -358,47 +727,53 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                     ),
                                   ),
                         ),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 16.0),
-                          child: Center(
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 6,
+                        // --- BADGES INFOS (desktop uniquement) ---
+                        if (MediaQuery.of(context).size.width > 800)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 16.0),
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[850],
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Text(
+                                      movie.year.toString(),
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[850],
-                                    borderRadius: BorderRadius.circular(30),
+                                  const SizedBox(width: 12),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 6,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.grey[850],
+                                      borderRadius: BorderRadius.circular(30),
+                                    ),
+                                    child: Text(
+                                      movie.voteAverage > 0
+                                          ? movie.voteAverage.toString()
+                                          : 'N/A',
+                                      style: const TextStyle(
+                                        color: Colors.white,
+                                      ),
+                                    ),
                                   ),
-                                  child: Text(
-                                    movie.year.toString(),
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[850],
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
-                                  child: Text(
-                                    movie.voteAverage > 0
-                                        ? movie.voteAverage.toString()
-                                        : 'N/A',
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
                           ),
-                        ),
                         // --- BOUTONS (déplacés ici) ---
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -451,7 +826,33 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                               sourceItem:
                                   movie, // Pass the movie as source item
                             ),
+                            const SizedBox(width: 12),
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (context) => TorrentSearchModal(
+                                        apiService: ApiServiceProvider.of(
+                                          context,
+                                        ),
+                                        mediaId: movie.id,
+                                        mediaType: 'movie',
+                                      ),
+                                );
+                              },
+                              icon: const Icon(Icons.search),
+                              label: const Text('Search Torrents'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF3B82F6),
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              ),
+                            ),
                             if (movie.files.isEmpty) ...[
+                              const SizedBox(width: 12),
                               ContentRequestButton(
                                 itemId: movie.id,
                                 itemType: 'movie',
@@ -517,160 +918,810 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                     .toList(),
                           ),
                         ],
-                        // --- AUTRES BOUTONS ---
-                        const SizedBox(height: 28),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 8.0),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                        // --- BOUTONS PLAY/DOWNLOAD NOUVEAUX ---
+                        const SizedBox(height: 32),
+                        Container(
+                          padding: const EdgeInsets.all(24),
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                              colors: [
+                                Colors.white.withOpacity(0.1),
+                                Colors.white.withOpacity(0.05),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(24),
+                            border: Border.all(
+                              color: Colors.white.withOpacity(0.15),
+                              width: 1,
+                            ),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.3),
+                                spreadRadius: 0,
+                                blurRadius: 20,
+                                offset: const Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.blue,
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
-                                    ),
-                                  ),
-                                  onPressed: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder:
-                                            (context) => PlayerPage(
-                                              transcodeUrl:
-                                                  selectedFile != null
-                                                      ? selectedFile
-                                                          .transcodeUrl
-                                                      : movie.transcodeUrl,
+                              // Bouton Play principal redesigné
+                              Container(
+                                width: double.infinity,
+                                height: 70,
+                                decoration: BoxDecoration(
+                                  gradient:
+                                      selectedFile != null ||
+                                              movie.transcodeUrl.isNotEmpty
+                                          ? const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF6366F1), // Indigo
+                                              Color(0xFF8B5CF6), // Violet
+                                              Color(0xFF3B82F6), // Blue
+                                            ],
+                                            stops: [0.0, 0.5, 1.0],
+                                          )
+                                          : LinearGradient(
+                                            colors: [
+                                              Colors.grey[700]!,
+                                              Colors.grey[800]!,
+                                            ],
+                                          ),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow:
+                                      selectedFile != null ||
+                                              movie.transcodeUrl.isNotEmpty
+                                          ? [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF6366F1,
+                                              ).withOpacity(0.5),
+                                              spreadRadius: 0,
+                                              blurRadius: 20,
+                                              offset: const Offset(0, 8),
                                             ),
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.3,
+                                              ),
+                                              spreadRadius: 0,
+                                              blurRadius: 15,
+                                              offset: const Offset(0, 5),
+                                            ),
+                                          ]
+                                          : [
+                                            BoxShadow(
+                                              color: Colors.black.withOpacity(
+                                                0.3,
+                                              ),
+                                              spreadRadius: 0,
+                                              blurRadius: 10,
+                                              offset: const Offset(0, 3),
+                                            ),
+                                          ],
+                                ),
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: InkWell(
+                                    onTap:
+                                        selectedFile != null ||
+                                                movie.transcodeUrl.isNotEmpty
+                                            ? () {
+                                              Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder:
+                                                      (context) => PlayerPage(
+                                                        transcodeUrl:
+                                                            selectedFile != null
+                                                                ? selectedFile
+                                                                    .transcodeUrl
+                                                                : movie
+                                                                    .transcodeUrl,
+                                                      ),
+                                                ),
+                                              );
+                                            }
+                                            : null,
+                                    borderRadius: BorderRadius.circular(20),
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 32,
                                       ),
-                                    );
-                                  },
-                                  icon: const Icon(Icons.play_arrow, size: 24),
-                                  label: Text(
-                                    movie.watch.current > 0 ? 'Resume' : 'Play',
-                                    style: const TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+                                      child: Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          // Icône avec effet pulsant
+                                          Container(
+                                            padding: const EdgeInsets.all(12),
+                                            decoration: BoxDecoration(
+                                              color: Colors.white.withOpacity(
+                                                0.2,
+                                              ),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              boxShadow: [
+                                                BoxShadow(
+                                                  color: Colors.white
+                                                      .withOpacity(0.1),
+                                                  spreadRadius: 0,
+                                                  blurRadius: 10,
+                                                  offset: const Offset(0, 2),
+                                                ),
+                                              ],
+                                            ),
+                                            child: Icon(
+                                              selectedFile != null ||
+                                                      movie
+                                                          .transcodeUrl
+                                                          .isNotEmpty
+                                                  ? Icons.play_arrow_rounded
+                                                  : Icons.download_rounded,
+                                              color: Colors.white,
+                                              size: 32,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 20),
+                                          // Texte principal
+                                          Expanded(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  selectedFile != null ||
+                                                          movie
+                                                              .transcodeUrl
+                                                              .isNotEmpty
+                                                      ? (movie.watch.current > 0
+                                                          ? 'Reprendre la lecture'
+                                                          : 'Regarder maintenant')
+                                                      : 'Aucun fichier disponible',
+                                                  style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 20,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                                if (movie.watch.current > 0 &&
+                                                    (selectedFile != null ||
+                                                        movie
+                                                            .transcodeUrl
+                                                            .isNotEmpty))
+                                                  Text(
+                                                    'Progression: ${(movie.watch.current / movie.watch.total * 100).toStringAsFixed(0)}%',
+                                                    style: TextStyle(
+                                                      color: Colors.white
+                                                          .withOpacity(0.8),
+                                                      fontSize: 14,
+                                                    ),
+                                                  ),
+                                              ],
+                                            ),
+                                          ),
+                                          // Barre de progression si applicable
+                                          if (movie.watch.current > 0 &&
+                                              (selectedFile != null ||
+                                                  movie
+                                                      .transcodeUrl
+                                                      .isNotEmpty))
+                                            Container(
+                                              width: 6,
+                                              height: 40,
+                                              decoration: BoxDecoration(
+                                                color: Colors.white.withOpacity(
+                                                  0.3,
+                                                ),
+                                                borderRadius:
+                                                    BorderRadius.circular(3),
+                                              ),
+                                              child: FractionallySizedBox(
+                                                alignment:
+                                                    Alignment.bottomCenter,
+                                                heightFactor:
+                                                    movie.watch.current /
+                                                    movie.watch.total,
+                                                child: Container(
+                                                  decoration: BoxDecoration(
+                                                    gradient:
+                                                        const LinearGradient(
+                                                          begin:
+                                                              Alignment
+                                                                  .topCenter,
+                                                          end:
+                                                              Alignment
+                                                                  .bottomCenter,
+                                                          colors: [
+                                                            Colors.white,
+                                                            Color(0xFFFFD700),
+                                                          ],
+                                                        ),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          3,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: TextButton.icon(
-                                  style: TextButton.styleFrom(
-                                    backgroundColor: Colors.grey[850],
-                                    foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 16,
-                                    ),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(4),
+
+                              const SizedBox(height: 20),
+
+                              // Boutons secondaires redesignés
+                              Row(
+                                children: [
+                                  // Bouton Download amélioré
+                                  Expanded(
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        gradient:
+                                            selectedFile != null
+                                                ? LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    const Color(
+                                                      0xFF10B981,
+                                                    ).withOpacity(0.8),
+                                                    const Color(
+                                                      0xFF059669,
+                                                    ).withOpacity(0.9),
+                                                  ],
+                                                )
+                                                : LinearGradient(
+                                                  colors: [
+                                                    Colors.grey[700]!
+                                                        .withOpacity(0.5),
+                                                    Colors.grey[800]!
+                                                        .withOpacity(0.7),
+                                                  ],
+                                                ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color:
+                                              selectedFile != null
+                                                  ? const Color(
+                                                    0xFF10B981,
+                                                  ).withOpacity(0.3)
+                                                  : Colors.grey[600]!
+                                                      .withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                        boxShadow:
+                                            selectedFile != null
+                                                ? [
+                                                  BoxShadow(
+                                                    color: const Color(
+                                                      0xFF10B981,
+                                                    ).withOpacity(0.3),
+                                                    spreadRadius: 0,
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                                : [],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap:
+                                              selectedFile != null
+                                                  ? () {
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      SnackBar(
+                                                        content: const Row(
+                                                          children: [
+                                                            Icon(
+                                                              Icons
+                                                                  .download_rounded,
+                                                              color:
+                                                                  Colors.white,
+                                                            ),
+                                                            SizedBox(width: 8),
+                                                            Text(
+                                                              'Téléchargement démarré',
+                                                            ),
+                                                          ],
+                                                        ),
+                                                        backgroundColor:
+                                                            const Color(
+                                                              0xFF10B981,
+                                                            ),
+                                                        duration:
+                                                            const Duration(
+                                                              seconds: 3,
+                                                            ),
+                                                        shape: RoundedRectangleBorder(
+                                                          borderRadius:
+                                                              BorderRadius.circular(
+                                                                12,
+                                                              ),
+                                                        ),
+                                                        behavior:
+                                                            SnackBarBehavior
+                                                                .floating,
+                                                      ),
+                                                    );
+                                                  }
+                                                  : null,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    8,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.download_rounded,
+                                                    color:
+                                                        selectedFile != null
+                                                            ? Colors.white
+                                                            : Colors.grey[500],
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                  'Télécharger',
+                                                  style: TextStyle(
+                                                    color:
+                                                        selectedFile != null
+                                                            ? Colors.white
+                                                            : Colors.grey[500],
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                  onPressed: () {},
-                                  icon: const Icon(Icons.download, size: 24),
-                                  label: const Text(
-                                    'Download',
-                                    style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
+
+                                  const SizedBox(width: 16),
+
+                                  // Bouton Partager amélioré
+                                  Expanded(
+                                    child: Container(
+                                      height: 56,
+                                      decoration: BoxDecoration(
+                                        gradient:
+                                            selectedFile != null
+                                                ? LinearGradient(
+                                                  begin: Alignment.topLeft,
+                                                  end: Alignment.bottomRight,
+                                                  colors: [
+                                                    const Color(
+                                                      0xFFF59E0B,
+                                                    ).withOpacity(0.8),
+                                                    const Color(
+                                                      0xFFD97706,
+                                                    ).withOpacity(0.9),
+                                                  ],
+                                                )
+                                                : LinearGradient(
+                                                  colors: [
+                                                    Colors.grey[700]!
+                                                        .withOpacity(0.5),
+                                                    Colors.grey[800]!
+                                                        .withOpacity(0.7),
+                                                  ],
+                                                ),
+                                        borderRadius: BorderRadius.circular(16),
+                                        border: Border.all(
+                                          color:
+                                              selectedFile != null
+                                                  ? const Color(
+                                                    0xFFF59E0B,
+                                                  ).withOpacity(0.3)
+                                                  : Colors.grey[600]!
+                                                      .withOpacity(0.3),
+                                          width: 1,
+                                        ),
+                                        boxShadow:
+                                            selectedFile != null
+                                                ? [
+                                                  BoxShadow(
+                                                    color: const Color(
+                                                      0xFFF59E0B,
+                                                    ).withOpacity(0.3),
+                                                    spreadRadius: 0,
+                                                    blurRadius: 12,
+                                                    offset: const Offset(0, 4),
+                                                  ),
+                                                ]
+                                                : [],
+                                      ),
+                                      child: Material(
+                                        color: Colors.transparent,
+                                        child: InkWell(
+                                          onTap:
+                                              selectedFile != null
+                                                  ? () {
+                                                    _shareFile(
+                                                      selectedFile.id
+                                                          .toString(),
+                                                    );
+                                                  }
+                                                  : null,
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 16,
+                                            ),
+                                            child: Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Container(
+                                                  padding: const EdgeInsets.all(
+                                                    8,
+                                                  ),
+                                                  decoration: BoxDecoration(
+                                                    color: Colors.white
+                                                        .withOpacity(0.2),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          10,
+                                                        ),
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.share_rounded,
+                                                    color:
+                                                        selectedFile != null
+                                                            ? Colors.white
+                                                            : Colors.grey[500],
+                                                    size: 20,
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Text(
+                                                  'Partager',
+                                                  style: TextStyle(
+                                                    color:
+                                                        selectedFile != null
+                                                            ? Colors.white
+                                                            : Colors.grey[500],
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ),
                                   ),
-                                ),
+                                ],
                               ),
                             ],
                           ),
                         ),
-                        // Bloc fichier: n'affiche rien si aucun fichier
+                        // --- SÉLECTEUR DE FICHIERS REDESIGNÉ ---
                         if (movie.files.isNotEmpty)
                           Container(
-                            margin: const EdgeInsets.symmetric(vertical: 16),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
+                            margin: const EdgeInsets.symmetric(vertical: 24),
                             decoration: BoxDecoration(
-                              color: Colors.grey[900],
-                              borderRadius: BorderRadius.circular(4),
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [
+                                  Colors.white.withOpacity(0.1),
+                                  Colors.white.withOpacity(0.05),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.15),
+                                width: 1,
+                              ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.2),
+                                  spreadRadius: 0,
+                                  blurRadius: 20,
+                                  offset: const Offset(0, 8),
+                                ),
+                              ],
                             ),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (selectedFile != null)
-                                  Expanded(
-                                    child: Text(
-                                      selectedFile.filename,
-                                      style: const TextStyle(
-                                        color: Colors.white,
+                                // En-tête redesigné
+                                Container(
+                                  padding: const EdgeInsets.all(20),
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topLeft,
+                                      end: Alignment.bottomRight,
+                                      colors: [
+                                        const Color(
+                                          0xFF3B82F6,
+                                        ).withOpacity(0.1),
+                                        const Color(
+                                          0xFF6366F1,
+                                        ).withOpacity(0.05),
+                                      ],
+                                    ),
+                                    borderRadius: const BorderRadius.only(
+                                      topLeft: Radius.circular(24),
+                                      topRight: Radius.circular(24),
+                                    ),
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Colors.white.withOpacity(0.1),
+                                        width: 1,
                                       ),
-                                      overflow: TextOverflow.ellipsis,
                                     ),
                                   ),
-                                if (movie.files.length > 1)
-                                  PopupMenuButton<int>(
-                                    icon: const Icon(
-                                      Icons.arrow_drop_down,
-                                      color: Colors.white,
-                                    ),
-                                    onSelected: (index) {
-                                      setState(() {
-                                        _selectedFileIndex = index;
-                                      });
-                                    },
-                                    itemBuilder:
-                                        (context) => List.generate(
-                                          movie.files.length,
-                                          (index) => PopupMenuItem<int>(
-                                            value: index,
-                                            child: Text(
-                                              movie.files[index].filename,
-                                              overflow: TextOverflow.ellipsis,
+                                  child: Row(
+                                    children: [
+                                      // Icône avec effet glassmorphism
+                                      Container(
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            begin: Alignment.topLeft,
+                                            end: Alignment.bottomRight,
+                                            colors: [
+                                              Color(0xFF3B82F6),
+                                              Color(0xFF6366F1),
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            16,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: const Color(
+                                                0xFF3B82F6,
+                                              ).withOpacity(0.4),
+                                              spreadRadius: 0,
+                                              blurRadius: 12,
+                                              offset: const Offset(0, 4),
                                             ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.video_library_rounded,
+                                          color: Colors.white,
+                                          size: 24,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 16),
+                                      // Titre et statistiques
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            const Text(
+                                              'Fichiers disponibles',
+                                              style: TextStyle(
+                                                color: Colors.white,
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              '${movie.files.length} fichier${movie.files.length > 1 ? 's' : ''} • ${_getFilesSize(movie.files)}',
+                                              style: TextStyle(
+                                                color: Colors.grey[300],
+                                                fontSize: 14,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      // Badge multiple fichiers
+                                      if (movie.files.length > 1)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 16,
+                                            vertical: 8,
+                                          ),
+                                          decoration: BoxDecoration(
+                                            gradient: LinearGradient(
+                                              colors: [
+                                                Colors.orange.withOpacity(0.2),
+                                                Colors.deepOrange.withOpacity(
+                                                  0.1,
+                                                ),
+                                              ],
+                                            ),
+                                            borderRadius: BorderRadius.circular(
+                                              20,
+                                            ),
+                                            border: Border.all(
+                                              color: Colors.orange.withOpacity(
+                                                0.3,
+                                              ),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              Icon(
+                                                Icons.layers_rounded,
+                                                color: Colors.orange[300],
+                                                size: 16,
+                                              ),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Multiple',
+                                                style: TextStyle(
+                                                  color: Colors.orange[300],
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ],
                                           ),
                                         ),
+                                    ],
                                   ),
-                                if (selectedFile != null)
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(
-                                      Icons.more_vert,
-                                      color: Colors.white70,
-                                    ),
-                                    onSelected: (value) {
-                                      if (value == 'share') {
-                                        _shareFile(selectedFile.id.toString());
-                                      }
-                                    },
-                                    itemBuilder:
-                                        (context) => [
-                                          const PopupMenuItem(
-                                            value: 'share',
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.share, size: 18),
-                                                SizedBox(width: 8),
-                                                Text('Share File'),
-                                              ],
-                                            ),
+                                ),
+
+                                // Liste des fichiers redesignée
+                                Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child:
+                                      movie.files.length == 1
+                                          ? _buildEnhancedSingleFileItem(
+                                            selectedFile!,
+                                          )
+                                          : Column(
+                                            children: List.generate(movie.files.length, (
+                                              index,
+                                            ) {
+                                              final file = movie.files[index];
+                                              final isSelected =
+                                                  index == _selectedFileIndex;
+
+                                              return Container(
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 12,
+                                                ),
+                                                decoration: BoxDecoration(
+                                                  gradient:
+                                                      isSelected
+                                                          ? LinearGradient(
+                                                            begin:
+                                                                Alignment
+                                                                    .topLeft,
+                                                            end:
+                                                                Alignment
+                                                                    .bottomRight,
+                                                            colors: [
+                                                              const Color(
+                                                                0xFF3B82F6,
+                                                              ).withOpacity(
+                                                                0.2,
+                                                              ),
+                                                              const Color(
+                                                                0xFF6366F1,
+                                                              ).withOpacity(
+                                                                0.1,
+                                                              ),
+                                                            ],
+                                                          )
+                                                          : LinearGradient(
+                                                            colors: [
+                                                              Colors.white
+                                                                  .withOpacity(
+                                                                    0.05,
+                                                                  ),
+                                                              Colors.white
+                                                                  .withOpacity(
+                                                                    0.02,
+                                                                  ),
+                                                            ],
+                                                          ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(16),
+                                                  border: Border.all(
+                                                    color:
+                                                        isSelected
+                                                            ? const Color(
+                                                              0xFF3B82F6,
+                                                            ).withOpacity(0.6)
+                                                            : Colors.white
+                                                                .withOpacity(
+                                                                  0.1,
+                                                                ),
+                                                    width: isSelected ? 2 : 1,
+                                                  ),
+                                                  boxShadow:
+                                                      isSelected
+                                                          ? [
+                                                            BoxShadow(
+                                                              color:
+                                                                  const Color(
+                                                                    0xFF3B82F6,
+                                                                  ).withOpacity(
+                                                                    0.3,
+                                                                  ),
+                                                              spreadRadius: 0,
+                                                              blurRadius: 12,
+                                                              offset:
+                                                                  const Offset(
+                                                                    0,
+                                                                    4,
+                                                                  ),
+                                                            ),
+                                                          ]
+                                                          : [],
+                                                ),
+                                                child: Material(
+                                                  color: Colors.transparent,
+                                                  child: InkWell(
+                                                    onTap: () {
+                                                      setState(() {
+                                                        _selectedFileIndex =
+                                                            index;
+                                                      });
+                                                    },
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                          16,
+                                                        ),
+                                                    child: Padding(
+                                                      padding:
+                                                          const EdgeInsets.all(
+                                                            16,
+                                                          ),
+                                                      child:
+                                                          _buildEnhancedFileItem(
+                                                            file,
+                                                            isSelected,
+                                                            index,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              );
+                                            }),
                                           ),
-                                          const PopupMenuItem(
-                                            value: 'options',
-                                            child: Row(
-                                              children: [
-                                                Icon(Icons.settings, size: 18),
-                                                SizedBox(width: 8),
-                                                Text('More Options'),
-                                              ],
-                                            ),
-                                          ),
-                                        ],
-                                  ),
+                                ),
                               ],
                             ),
                           ),
@@ -1169,7 +2220,6 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
   }
 
   Widget _buildSeasonEpisodes(SEASON season, String seriesId, TVItem tvSeries) {
-    final isMobile = MediaQuery.of(context).size.width <= 600;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1189,7 +2239,7 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
               ),
               // Affiche le TorrentInfoButton seulement si aucun épisode de la saison n'a de fichiers
               if (!season.EPISODES.any((ep) => ep.FILES.isNotEmpty) &&
-                  season.SEASON_NUMBER > 0)
+                  season.SEASON_NUMBER > 0) ...[
                 TorrentInfoButton(
                   itemId: seriesId,
                   itemType: 'tv',
@@ -1198,6 +2248,35 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                   seasonId: season.ID.toString(),
                   sourceItem: season, // Pass the TV series as source item
                 ),
+                const SizedBox(width: 8),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder:
+                          (context) => TorrentSearchModal(
+                            apiService: ApiServiceProvider.of(context),
+                            mediaId: seriesId,
+                            mediaType: 'tv',
+                          ),
+                    );
+                  },
+                  icon: const Icon(Icons.search, size: 16),
+                  label: const Text('Search', style: TextStyle(fontSize: 12)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B82F6),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
+                    ),
+                    minimumSize: const Size(0, 32),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
+              ],
               if (season.EPISODES.isEmpty ||
                   season.EPISODES.every((episode) => episode.FILES.isEmpty))
                 ContentRequestButton(
@@ -1588,5 +2667,430 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
         ],
       ],
     );
+  }
+
+  // Méthode pour calculer la taille totale des fichiers
+  String _getFilesSize(List<dynamic> files) {
+    if (files.isEmpty) return '0 MB';
+    // Simulation d'une taille basée sur le nombre de fichiers et leur qualité
+    double totalSize = 0.0;
+    for (var file in files) {
+      final quality = _getFileQuality(file.filename);
+      if (quality.contains('4K')) {
+        totalSize += 8.5; // GB
+      } else if (quality.contains('1080p')) {
+        totalSize += 4.2; // GB
+      } else if (quality.contains('720p')) {
+        totalSize += 2.1; // GB
+      } else {
+        totalSize += 1.5; // GB
+      }
+    }
+    return totalSize > 1
+        ? '${totalSize.toStringAsFixed(1)} GB'
+        : '${(totalSize * 1024).toStringAsFixed(0)} MB';
+  }
+
+  // Méthode pour afficher un fichier unique avec design amélioré
+  Widget _buildEnhancedSingleFileItem(dynamic file) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            const Color(0xFF10B981).withOpacity(0.1),
+            const Color(0xFF059669).withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: const Color(0xFF10B981).withOpacity(0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Icône avec animation
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF10B981).withOpacity(0.4),
+                      spreadRadius: 0,
+                      blurRadius: 12,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.play_circle_filled_rounded,
+                  color: Colors.white,
+                  size: 28,
+                ),
+              ),
+              const SizedBox(width: 16),
+              // Informations du fichier
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      file.filename,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildFileInfoChip(
+                          Icons.high_quality_rounded,
+                          _getFileQuality(file.filename),
+                          _getQualityColor(_getFileQuality(file.filename)),
+                        ),
+                        const SizedBox(width: 12),
+                        _buildFileInfoChip(
+                          Icons.storage_rounded,
+                          _getFileSize(file.filename),
+                          Colors.blue,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              // Menu d'options
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: PopupMenuButton<String>(
+                  icon: const Icon(
+                    Icons.more_vert_rounded,
+                    color: Colors.white,
+                  ),
+                  onSelected: (value) {
+                    if (value == 'share') {
+                      _shareFile(file.id.toString());
+                    }
+                  },
+                  itemBuilder:
+                      (context) => [
+                        const PopupMenuItem(
+                          value: 'share',
+                          child: Row(
+                            children: [
+                              Icon(Icons.share_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text('Partager le fichier'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'info',
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_rounded, size: 18),
+                              SizedBox(width: 8),
+                              Text('Informations'),
+                            ],
+                          ),
+                        ),
+                      ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          // Barre de progression si applicable
+          Container(
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[700],
+              borderRadius: BorderRadius.circular(2),
+            ),
+            child: FractionallySizedBox(
+              alignment: Alignment.centerLeft,
+              widthFactor: 1.0, // Simule un fichier prêt
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFF10B981), Color(0xFF059669)],
+                  ),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Prêt à être lu',
+            style: TextStyle(
+              color: const Color(0xFF10B981),
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode pour afficher un fichier dans une liste avec design amélioré
+  Widget _buildEnhancedFileItem(dynamic file, bool isSelected, int index) {
+    return Row(
+      children: [
+        // Indicateur de sélection avec animation
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            gradient:
+                isSelected
+                    ? const LinearGradient(
+                      colors: [Color(0xFF3B82F6), Color(0xFF6366F1)],
+                    )
+                    : null,
+            color: isSelected ? null : Colors.transparent,
+            border:
+                isSelected
+                    ? null
+                    : Border.all(color: Colors.grey[600]!, width: 2),
+            borderRadius: BorderRadius.circular(14),
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.4),
+                        spreadRadius: 0,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                    : [],
+          ),
+          child:
+              isSelected
+                  ? const Icon(
+                    Icons.check_rounded,
+                    color: Colors.white,
+                    size: 18,
+                  )
+                  : Center(
+                    child: Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+        ),
+        const SizedBox(width: 16),
+
+        // Icône du fichier avec animation
+        AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            gradient:
+                isSelected
+                    ? LinearGradient(
+                      colors: [
+                        const Color(0xFF3B82F6).withOpacity(0.3),
+                        const Color(0xFF6366F1).withOpacity(0.2),
+                      ],
+                    )
+                    : null,
+            color: isSelected ? null : Colors.grey[800]!.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(10),
+            boxShadow:
+                isSelected
+                    ? [
+                      BoxShadow(
+                        color: const Color(0xFF3B82F6).withOpacity(0.2),
+                        spreadRadius: 0,
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                    : [],
+          ),
+          child: Icon(
+            Icons.play_circle_filled_rounded,
+            color: isSelected ? const Color(0xFF3B82F6) : Colors.grey[500],
+            size: 24,
+          ),
+        ),
+        const SizedBox(width: 16),
+
+        // Informations du fichier
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                file.filename,
+                style: TextStyle(
+                  color: isSelected ? Colors.white : Colors.grey[300],
+                  fontSize: 15,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildFileInfoChip(
+                    Icons.high_quality_rounded,
+                    _getFileQuality(file.filename),
+                    _getQualityColor(_getFileQuality(file.filename)),
+                  ),
+                  const SizedBox(width: 8),
+                  _buildFileInfoChip(
+                    Icons.storage_rounded,
+                    _getFileSize(file.filename),
+                    Colors.blue,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Menu d'options
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.05),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: PopupMenuButton<String>(
+            icon: Icon(
+              Icons.more_vert_rounded,
+              color: Colors.grey[400],
+              size: 20,
+            ),
+            onSelected: (value) {
+              if (value == 'share') {
+                _shareFile(file.id.toString());
+              }
+            },
+            itemBuilder:
+                (context) => [
+                  const PopupMenuItem(
+                    value: 'share',
+                    child: Row(
+                      children: [
+                        Icon(Icons.share_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Partager'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'info',
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_rounded, size: 18),
+                        SizedBox(width: 8),
+                        Text('Informations'),
+                      ],
+                    ),
+                  ),
+                ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Widget helper pour les puces d'informations
+  Widget _buildFileInfoChip(IconData icon, String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Méthode helper pour extraire la qualité du nom de fichier
+  String _getFileQuality(String filename) {
+    if (filename.toUpperCase().contains('4K') ||
+        filename.toUpperCase().contains('2160P')) {
+      return '4K';
+    } else if (filename.toUpperCase().contains('1080P')) {
+      return '1080p';
+    } else if (filename.toUpperCase().contains('720P')) {
+      return '720p';
+    } else if (filename.toUpperCase().contains('480P')) {
+      return '480p';
+    }
+    return 'SD';
+  }
+
+  // Méthode helper pour obtenir la couleur selon la qualité
+  Color _getQualityColor(String quality) {
+    switch (quality) {
+      case '4K':
+        return Colors.purple;
+      case '1080p':
+        return Colors.green;
+      case '720p':
+        return Colors.blue;
+      case '480p':
+        return Colors.orange;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Méthode helper pour extraire la taille approximative du fichier
+  String _getFileSize(String filename) {
+    // Extraction basique basée sur les patterns courants
+    if (filename.toUpperCase().contains('4K') ||
+        filename.toUpperCase().contains('2160P')) {
+      return '~15-25 GB';
+    } else if (filename.toUpperCase().contains('1080P')) {
+      return '~2-8 GB';
+    } else if (filename.toUpperCase().contains('720P')) {
+      return '~1-3 GB';
+    } else if (filename.toUpperCase().contains('480P')) {
+      return '~500MB-1GB';
+    }
+    return 'Taille inconnue';
   }
 }

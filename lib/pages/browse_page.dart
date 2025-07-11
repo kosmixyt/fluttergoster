@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:fluttergoster/main.dart';
 import 'package:fluttergoster/models/data_models.dart';
-import 'package:fluttergoster/services/api_service.dart';
-import 'package:fluttergoster/widgets/cookie_image.dart';
 import 'package:fluttergoster/widgets/goster_top_bar.dart';
 import 'package:fluttergoster/widgets/media_card.dart';
 
@@ -125,19 +123,22 @@ class _BrowsePageState extends State<BrowsePage> {
 
   @override
   Widget build(BuildContext context) {
-    // Calculate responsive grid layout based on device size
+    // Enhanced responsive grid layout
     final screenWidth = MediaQuery.of(context).size.width;
-    final isPhone = MediaQuery.of(context).size.shortestSide < 600;
+    final isDesktop = screenWidth > 1200;
+    final isTablet = screenWidth > 800 && screenWidth <= 1200;
+    final isPhone = screenWidth <= 800;
 
-    // Increase desired width for better visibility, especially on mobile
-    final double desiredItemWidth = isPhone ? 150 : 180;
+    // Responsive item sizing
+    final double desiredItemWidth = isDesktop ? 200 : (isTablet ? 180 : 160);
+    final double horizontalPadding = isDesktop ? 48 : (isTablet ? 24 : 16);
+    final double spacing = isDesktop ? 20 : 16;
 
-    // Allow fewer items per row on smaller screens
-    int crossAxisCount = (screenWidth / desiredItemWidth).floor();
-    crossAxisCount = crossAxisCount.clamp(isPhone ? 2 : 3, 6);
-
-    final itemWidth =
-        (screenWidth - 32 - (16 * (crossAxisCount - 1))) / crossAxisCount;
+    // Calculate optimal grid layout
+    int crossAxisCount =
+        ((screenWidth - (horizontalPadding * 2)) / (desiredItemWidth + spacing))
+            .floor();
+    crossAxisCount = crossAxisCount.clamp(isPhone ? 2 : 3, isDesktop ? 8 : 6);
 
     return Scaffold(
       appBar: GosterTopBar(
@@ -151,60 +152,232 @@ class _BrowsePageState extends State<BrowsePage> {
         backgroundColor: Colors.grey[900],
         child:
             _isInitialLoad
-                ? const Center(child: CircularProgressIndicator())
-                : _allItems.isEmpty
                 ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Icon(
-                        Icons.search_off,
-                        size: 50,
-                        color: Colors.grey,
-                      ),
+                      const CircularProgressIndicator(),
                       const SizedBox(height: 16),
                       Text(
-                        'Aucun contenu trouvé',
+                        'Chargement du contenu...',
                         style: TextStyle(color: Colors.grey[400], fontSize: 16),
-                      ),
-                      const SizedBox(height: 8),
-                      TextButton(
-                        onPressed: _loadAllItems,
-                        child: const Text('Réessayer'),
                       ),
                     ],
                   ),
                 )
-                : GridView.builder(
-                  controller: _scrollController,
-                  padding: const EdgeInsets.all(16),
-                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: crossAxisCount,
-                    childAspectRatio: 2 / 3,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                  ),
-                  itemCount:
-                      _displayedItems.length +
-                      (_displayedItems.length < _allItems.length ? 1 : 0),
-                  itemBuilder: (context, index) {
-                    // Display loading indicator at the end
-                    if (index >= _displayedItems.length) {
-                      return const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(16.0),
-                          child: CircularProgressIndicator(),
+                : _allItems.isEmpty
+                ? Center(
+                  child: Container(
+                    padding: const EdgeInsets.all(32),
+                    margin: const EdgeInsets.all(24),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[900]?.withOpacity(0.5),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[700]!, width: 1),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.mediaType == "movie"
+                              ? Icons.movie_outlined
+                              : Icons.tv_outlined,
+                          size: 64,
+                          color: Colors.grey[600],
                         ),
-                      );
-                    }
+                        const SizedBox(height: 16),
+                        Text(
+                          'Aucun contenu trouvé',
+                          style: TextStyle(
+                            color: Colors.grey[300],
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Aucun ${widget.mediaType == "movie" ? "film" : "série"} n\'est disponible pour le moment.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        ElevatedButton.icon(
+                          onPressed: _loadAllItems,
+                          icon: const Icon(Icons.refresh),
+                          label: const Text('Réessayer'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue[600],
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+                : CustomScrollView(
+                  controller: _scrollController,
+                  physics: const BouncingScrollPhysics(),
+                  slivers: [
+                    // Header section with stats
+                    SliverToBoxAdapter(
+                      child: Container(
+                        padding: EdgeInsets.all(horizontalPadding),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 20),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        'Découvrir',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: isDesktop ? 32 : 24,
+                                          fontWeight: FontWeight.bold,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        '${_allItems.length} ${widget.mediaType == "movie" ? "films" : "séries"} disponibles',
+                                        style: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: isDesktop ? 16 : 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                if (isDesktop)
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 8,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Colors.blue[600],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Icon(
+                                          widget.mediaType == "movie"
+                                              ? Icons.movie
+                                              : Icons.tv,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          widget.mediaType == "movie"
+                                              ? "Films"
+                                              : "Séries",
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(height: 24),
+                          ],
+                        ),
+                      ),
+                    ),
 
-                    // Display media card
-                    final item = _displayedItems[index];
-                    return MediaCard(
-                      media: item,
-                      displayMode: MediaCardDisplayMode.poster,
-                    );
-                  },
+                    // Grid content
+                    SliverPadding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                      ),
+                      sliver: SliverGrid(
+                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: crossAxisCount,
+                          childAspectRatio: 2 / 3,
+                          crossAxisSpacing: spacing,
+                          mainAxisSpacing: spacing,
+                        ),
+                        delegate: SliverChildBuilderDelegate(
+                          (context, index) {
+                            // Loading indicator at the end
+                            if (index >= _displayedItems.length) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[900]?.withOpacity(0.3),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                      SizedBox(height: 8),
+                                      Text(
+                                        'Chargement...',
+                                        style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }
+
+                            // Media card with enhanced hover effects
+                            final item = _displayedItems[index];
+                            return MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 200),
+                                curve: Curves.easeInOut,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(12),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.3),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: MediaCard(
+                                  media: item,
+                                  displayMode: MediaCardDisplayMode.poster,
+                                ),
+                              ),
+                            );
+                          },
+                          childCount:
+                              _displayedItems.length +
+                              (_displayedItems.length < _allItems.length
+                                  ? 1
+                                  : 0),
+                        ),
+                      ),
+                    ),
+
+                    // Bottom padding
+                    const SliverToBoxAdapter(child: SizedBox(height: 40)),
+                  ],
                 ),
       ),
     );

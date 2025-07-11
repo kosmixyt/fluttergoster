@@ -64,10 +64,16 @@ class Provider {
   });
 
   factory Provider.fromJson(Map<String, dynamic> json) => Provider(
-    providerId: json['PROVIDER_ID'],
-    url: json['URL'],
-    providerName: json['PROVIDER_NAME'],
-    displayPriority: json['DISPLAY_PRIORITY'],
+    providerId:
+        json['PROVIDER_ID'] is String
+            ? int.tryParse(json['PROVIDER_ID']) ?? 0
+            : json['PROVIDER_ID'],
+    url: json['URL']?.toString() ?? '',
+    providerName: json['PROVIDER_NAME']?.toString() ?? '',
+    displayPriority:
+        json['DISPLAY_PRIORITY'] is String
+            ? int.tryParse(json['DISPLAY_PRIORITY']) ?? 0
+            : json['DISPLAY_PRIORITY'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -170,10 +176,16 @@ class ProviderItem {
   });
 
   factory ProviderItem.fromJson(Map<String, dynamic> json) => ProviderItem(
-    providerId: json['PROVIDER_ID'],
-    url: json['URL'],
-    providerName: json['PROVIDER_NAME'],
-    displayPriority: json['DISPLAY_PRIORITY'],
+    providerId:
+        json['PROVIDER_ID'] is String
+            ? int.tryParse(json['PROVIDER_ID']) ?? 0
+            : json['PROVIDER_ID'],
+    url: json['URL']?.toString() ?? '',
+    providerName: json['PROVIDER_NAME']?.toString() ?? '',
+    displayPriority:
+        json['DISPLAY_PRIORITY'] is String
+            ? int.tryParse(json['DISPLAY_PRIORITY']) ?? 0
+            : json['DISPLAY_PRIORITY'],
   );
 
   Map<String, dynamic> toJson() => {
@@ -226,27 +238,27 @@ class SkinnyRender {
   });
 
   factory SkinnyRender.fromJson(Map<String, dynamic> json) => SkinnyRender(
-    id: json['ID'],
-    type: json['TYPE'],
-    name: json['NAME'],
-    poster: json['POSTER'],
-    backdrop: json['BACKDROP'],
-    description: json['DESCRIPTION'],
+    id: json['ID']?.toString() ?? '',
+    type: json['TYPE']?.toString() ?? '',
+    name: json['NAME']?.toString() ?? '',
+    poster: json['POSTER']?.toString() ?? '',
+    backdrop: json['BACKDROP']?.toString() ?? '',
+    description: json['DESCRIPTION']?.toString() ?? '',
     year: json['YEAR'],
-    runtime: json['RUNTIME'],
+    runtime: json['RUNTIME']?.toString() ?? '',
     genre: (json['GENRE'] as List).map((e) => Genre.fromJson(e)).toList(),
-    trailer: json['TRAILER'],
+    trailer: json['TRAILER']?.toString() ?? '',
     watch: WatchData.fromJson(json['WATCH']),
     watchlisted: json['WATCHLISTED'],
-    logo: json['LOGO'],
-    transcodeUrl: json['TRANSCODE_URL'],
+    logo: json['LOGO']?.toString() ?? '',
+    transcodeUrl: json['TRANSCODE_URL']?.toString() ?? '',
     providers:
         (json['PROVIDERS'] as List)
             .map((e) => ProviderItem.fromJson(e))
             .toList(),
-    displayData: json['DisplayData'],
-    logoUrl: json['LOGO'],
-    transcodedUrl: json['TRANSCODE_URL'],
+    displayData: json['DisplayData']?.toString() ?? '',
+    logoUrl: json['LOGO']?.toString(),
+    transcodedUrl: json['TRANSCODE_URL']?.toString(),
   );
 
   Map<String, dynamic> toJson() => {
@@ -321,7 +333,7 @@ class MovieItem {
   final String id;
   final String displayName;
   final String logo;
-  final dynamic year;
+  final int year;
   final List<FileItem> files;
   final WatchData watch;
   final String budget;
@@ -329,11 +341,11 @@ class MovieItem {
   final String director;
   final String writer;
   final String tagline;
-  final double voteAverage;
+  final int voteAverage;
   final List<Provider> providers;
   final String type;
   final String description;
-  final String runtime;
+  final int runtime;
   final List<SkinnyRender> similars;
   bool watchlisted;
   final List<Genre> genre;
@@ -382,7 +394,7 @@ class MovieItem {
     director: json['DIRECTOR'] ?? "",
     writer: json['WRITER'] ?? "",
     tagline: json['TAGLINE'] ?? "",
-    voteAverage: (json['Vote_average'] as num?)?.toDouble() ?? 0.0,
+    voteAverage: (json['Vote_average'] as num?)?.toInt() ?? 0,
     providers:
         (json['PROVIDERS'] as List).map((e) => Provider.fromJson(e)).toList(),
     type: json['TYPE'],

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fluttergoster/pages/browse_page.dart';
 import 'package:fluttergoster/pages/home_page.dart';
 import 'package:fluttergoster/pages/me_page.dart'; // Add this import
-import 'package:fluttergoster/services/api_service.dart';
 import 'package:fluttergoster/widgets/search_modal.dart';
 
 class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
@@ -37,7 +36,10 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
         child: Padding(
           padding: EdgeInsets.symmetric(
             horizontal: horizontalPadding,
-            vertical: 8.0,
+            vertical:
+                screenWidth > 1200
+                    ? 6.0
+                    : 8.0, // Moins de padding vertical sur desktop
           ),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -51,7 +53,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
                     size: iconSize,
                   ),
                   onPressed: onBackPressed ?? () => Navigator.of(context).pop(),
-                  padding: EdgeInsets.all(iconSpacing / 3),
+                  padding: EdgeInsets.all(_calculateButtonPadding(screenWidth)),
                 )
               else
                 SizedBox(
@@ -93,7 +95,9 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
                     onPressed: () {
                       SearchModal.show(context);
                     },
-                    padding: EdgeInsets.all(iconSpacing / 3),
+                    padding: EdgeInsets.all(
+                      _calculateButtonPadding(screenWidth),
+                    ),
                   ),
                   SizedBox(width: iconSpacing / 2),
                   IconButton(
@@ -108,7 +112,9 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
                         context,
                       ).push(MaterialPageRoute(builder: (_) => const MePage()));
                     },
-                    padding: EdgeInsets.all(iconSpacing / 3),
+                    padding: EdgeInsets.all(
+                      _calculateButtonPadding(screenWidth),
+                    ),
                   ),
                 ],
               ),
@@ -160,25 +166,29 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   // Calcule dynamiquement la taille de l'icône en fonction de la largeur de l'écran
   double _calculateIconSize(double screenWidth) {
-    if (screenWidth > 1200) {
-      return 28.0; // Grand écran
+    if (screenWidth > 1400) {
+      return 24.0; // Très grand écran (desktop)
+    } else if (screenWidth > 1200) {
+      return 22.0; // Grand écran (desktop)
     } else if (screenWidth > 800) {
-      return 24.0; // Écran moyen
+      return 20.0; // Écran moyen (tablet landscape)
     } else if (screenWidth > 600) {
-      return 22.0; // Petit écran
+      return 18.0; // Petit écran (tablet portrait)
     } else {
-      return 20.0; // Très petit écran (mobile)
+      return 16.0; // Très petit écran (mobile)
     }
   }
 
   // Calcule dynamiquement le padding horizontal en fonction de la largeur de l'écran
   double _calculateHorizontalPadding(double screenWidth) {
-    if (screenWidth > 1200) {
-      return 24.0; // Grand écran
+    if (screenWidth > 1400) {
+      return 32.0; // Très grand écran (desktop)
+    } else if (screenWidth > 1200) {
+      return 24.0; // Grand écran (desktop)
     } else if (screenWidth > 800) {
-      return 20.0; // Écran moyen
+      return 20.0; // Écran moyen (tablet landscape)
     } else if (screenWidth > 600) {
-      return 16.0; // Petit écran
+      return 16.0; // Petit écran (tablet portrait)
     } else {
       return 12.0; // Très petit écran (mobile)
     }
@@ -186,12 +196,14 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   // Calcule dynamiquement l'espacement entre les icônes
   double _calculateIconSpacing(double screenWidth) {
-    if (screenWidth > 1200) {
-      return 20.0; // Grand écran
+    if (screenWidth > 1400) {
+      return 24.0; // Très grand écran (desktop)
+    } else if (screenWidth > 1200) {
+      return 20.0; // Grand écran (desktop)
     } else if (screenWidth > 800) {
-      return 16.0; // Écran moyen
+      return 16.0; // Écran moyen (tablet landscape)
     } else if (screenWidth > 600) {
-      return 12.0; // Petit écran
+      return 12.0; // Petit écran (tablet portrait)
     } else {
       return 8.0; // Très petit écran (mobile)
     }
@@ -199,13 +211,34 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
 
   // Calcule dynamiquement la hauteur de la barre
   double _calculateBarHeight(double screenWidth) {
-    if (screenWidth > 800) {
-      return 64.0; // Grand écran
+    if (screenWidth > 1200) {
+      return 48.0; // PC/Desktop - Plus compact
+    } else if (screenWidth > 800) {
+      return 56.0; // Tablet landscape
+    } else if (screenWidth > 600) {
+      return 54.0; // Tablet portrait
     } else {
-      return 56.0; // Petit écran
+      return 52.0; // Mobile
+    }
+  }
+
+  // Calcule dynamiquement le padding des boutons
+  double _calculateButtonPadding(double screenWidth) {
+    if (screenWidth > 1200) {
+      return 4.0; // Desktop - Padding réduit
+    } else if (screenWidth > 800) {
+      return 6.0; // Tablet landscape
+    } else if (screenWidth > 600) {
+      return 7.0; // Tablet portrait
+    } else {
+      return 8.0; // Mobile - Plus de padding pour faciliter le touch
     }
   }
 
   @override
-  Size get preferredSize => const Size.fromHeight(64.0); // Hauteur maximale
+  Size get preferredSize {
+    // Ajuste la hauteur préférée en fonction de la largeur de l'écran
+    // Note: Nous ne pouvons pas accéder au MediaQuery ici, donc nous utilisons une valeur moyenne
+    return const Size.fromHeight(52.0);
+  }
 }

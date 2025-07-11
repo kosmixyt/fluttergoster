@@ -164,7 +164,7 @@ class _PlayerPageState extends State<PlayerPage> {
             httpHeaders: headers,
             start:
                 _transcoderData?.current != null
-                    ? Duration(seconds: _transcoderData!.current!)
+                    ? Duration(seconds: _transcoderData!.current)
                     : Duration(seconds: 0),
           ),
           play: true,
@@ -182,14 +182,21 @@ class _PlayerPageState extends State<PlayerPage> {
   }
 
   void _toggleFullScreen() {
-    setState(() {
-      _isFullScreen = !_isFullScreen;
-    });
+    // Store current state to avoid unnecessary rebuilds
+    final currentFullScreenState = _isFullScreen;
 
-    if (_isFullScreen) {
-      FullScreen.setFullScreen(true);
-    } else {
+    // Change fullscreen mode first
+    if (currentFullScreenState) {
       FullScreen.setFullScreen(false);
+    } else {
+      FullScreen.setFullScreen(true);
+    }
+
+    // Only update state if it actually changed
+    if (_isFullScreen != !currentFullScreenState) {
+      setState(() {
+        _isFullScreen = !currentFullScreenState;
+      });
     }
   }
 
@@ -471,6 +478,30 @@ class _PlayerPageState extends State<PlayerPage> {
     return ''; // Return empty if no pattern found
   }
 
+  Widget _buildVideoPlayer() {
+    // Store the controls in a variable to avoid recreation
+    final videoControls = MaterialControls(
+      player: _player,
+      videoTitle: _transcoderData!.name,
+      onBackPressed: () => Navigator.pop(context),
+      onFullscreenPressed: _toggleFullScreen,
+      isFullscreen: _isFullScreen,
+      onNextPressed: _showNextCardOnDemand,
+      hasNext:
+          _transcoderData != null &&
+          _transcoderData!.next.TRANSCODE_URL.isNotEmpty,
+      isMobileDevice: _isMobileDevice(context),
+    );
+
+    return Video(
+      key: ValueKey(
+        _transcoderData?.downloadUrl,
+      ), // Use ValueKey to preserve state based on video URL
+      controller: _controller,
+      controls: (VideoState state) => videoControls,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -482,26 +513,7 @@ class _PlayerPageState extends State<PlayerPage> {
               ? _buildErrorView()
               : Stack(
                 children: [
-                  Video(
-                    controller: _controller,
-                    controls: (VideoState state) {
-                      return MaterialControls(
-                        player: _player,
-                        videoTitle: _transcoderData!.name,
-                        onBackPressed: () => Navigator.pop(context),
-                        onFullscreenPressed: _toggleFullScreen,
-                        isFullscreen: _isFullScreen,
-                        // Add new parameter for next button callback
-                        onNextPressed: _showNextCardOnDemand,
-                        // Add hasNext parameter to enable/disable next button
-                        hasNext:
-                            _transcoderData != null &&
-                            _transcoderData!.next.TRANSCODE_URL.isNotEmpty,
-                        // Pass isMobileDevice to MaterialControls
-                        isMobileDevice: _isMobileDevice(context),
-                      );
-                    },
-                  ),
+                  _buildVideoPlayer(),
                   // Buffering indicator overlay
                   StreamBuilder<bool>(
                     stream: _player.stream.buffering,
@@ -614,7 +626,6 @@ class _MaterialControlsState extends State<MaterialControls> {
   Timer? _hideControlsTimer;
   double _lastVolume = 1.0; // Store the last non-zero volume level
   String _currentSubtitle = "No Subs";
-  String _currentAudioTrack = "Audio";
 
   @override
   void initState() {
@@ -630,10 +641,8 @@ class _MaterialControlsState extends State<MaterialControls> {
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
         final subtitles = widget.player.state.tracks.subtitle;
-        final audioTracks = widget.player.state.tracks.audio;
 
         // Get the currently active track IDs
-        final activeAudioId = widget.player.state.track.audio;
         final activeSubtitleId = widget.player.state.track.subtitle;
 
         setState(() {
@@ -642,17 +651,6 @@ class _MaterialControlsState extends State<MaterialControls> {
               subtitles.isEmpty
                   ? "No Subs"
                   : (activeSubtitleId != -1 ? "Subtitles On" : "No Subs");
-
-          // Find the active audio track by ID
-          final activeAudio =
-              audioTracks.isEmpty
-                  ? null
-                  : audioTracks.firstWhere(
-                    (t) => t.id == activeAudioId,
-                    orElse: () => audioTracks.first,
-                  );
-
-          _currentAudioTrack = activeAudio?.title ?? "Audio";
         });
       }
     });
@@ -687,7 +685,9 @@ class _MaterialControlsState extends State<MaterialControls> {
                   ...tracks.map(
                     (track) => ListTile(
                       title: Text(
-                        '${track.title} (${track.language})' ?? 'Unknown',
+                        track.title != null && track.language != null
+                            ? '${track.title} (${track.language})'
+                            : track.title ?? 'Unknown',
                       ),
                       selected: track.id == activeTrackId,
                       onTap: () {
@@ -731,9 +731,6 @@ class _MaterialControlsState extends State<MaterialControls> {
                       selected: track.id == activeTrackId,
                       onTap: () {
                         widget.player.setAudioTrack(track);
-                        setState(
-                          () => _currentAudioTrack = track.title ?? "Audio",
-                        );
                         Navigator.pop(context);
                       },
                     ),

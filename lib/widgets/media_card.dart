@@ -25,7 +25,7 @@ class MediaCard extends StatefulWidget {
     this.width = 300.0,
     this.height = 170.0,
     this.displayMode = MediaCardDisplayMode.backdrop,
-    this.hoverDelay = const Duration(milliseconds: 150),
+    this.hoverDelay = const Duration(milliseconds: 1000),
     this.onWatchlistChanged,
     this.apiService, // New optional parameter
   });
@@ -39,6 +39,7 @@ class _MediaCardState extends State<MediaCard>
   bool _isHovering = false;
   bool _isUpdatingWatchlist = false;
   bool _isLongPressed = false; // Add to track long press state
+  bool _showHoverDetails = false; // Affiche les détails après le délai
   AnimationController? _animationController;
   Animation<double>? _scaleAnimation;
   Timer? _hoverTimer;
@@ -72,8 +73,11 @@ class _MediaCardState extends State<MediaCard>
   // Helper methods to control animation safely
   void _startHoverAnimation() {
     _hoverTimer?.cancel();
-    _hoverTimer = Timer(const Duration(milliseconds: 500), () {
+    _hoverTimer = Timer(widget.hoverDelay, () {
       if (mounted && _isHovering && _animationController != null) {
+        setState(() {
+          _showHoverDetails = true;
+        });
         _animationController!.forward();
       }
     });
@@ -83,6 +87,11 @@ class _MediaCardState extends State<MediaCard>
     _hoverTimer?.cancel();
     if (_animationController != null && mounted) {
       _animationController!.reverse();
+    }
+    if (mounted) {
+      setState(() {
+        _showHoverDetails = false;
+      });
     }
   }
 
@@ -244,18 +253,44 @@ class _MediaCardState extends State<MediaCard>
   }
 
   Widget _buildPosterCard() {
-    final aspectRatio = 2 / 4; // Standard poster aspect ratio
-    final cardHeight = widget.height * 1.5;
-    final cardWidth = cardHeight * aspectRatio;
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive dimensions
+    final aspectRatio = 2.0 / 3.0; // Standard poster aspect ratio (2:3)
+
+    // Adaptive sizing based on screen width - making cards smaller
+    double cardWidth;
+
+    if (screenWidth > 1200) {
+      // Large screens (desktop)
+      cardWidth = screenWidth * 0.08;
+    } else if (screenWidth > 800) {
+      // Medium screens (tablet)
+      cardWidth = screenWidth * 0.12;
+    } else if (screenWidth > 600) {
+      // Small tablets
+      cardWidth = screenWidth * 0.16;
+    } else {
+      // Mobile screens
+      cardWidth = screenWidth * 0.22;
+    }
+
+    // Ensure minimum and maximum sizes with proper aspect ratio
+    final finalCardWidth = cardWidth.clamp(120.0, 200.0);
+    final finalCardHeight = finalCardWidth / aspectRatio;
 
     return Container(
-      width: cardWidth,
-      height: cardHeight,
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      width: finalCardWidth,
+      height: finalCardHeight,
+      margin: EdgeInsets.symmetric(
+        horizontal: screenWidth > 600 ? 6.0 : 3.0,
+        vertical: 3.0,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
         boxShadow:
-            _isHovering
+            _showHoverDetails
                 ? [
                   BoxShadow(
                     color: Colors.blue.withOpacity(0.6),
@@ -298,7 +333,7 @@ class _MediaCardState extends State<MediaCard>
               bottom: 0,
               left: 0,
               right: 0,
-              height: cardHeight * 0.35,
+              height: finalCardHeight * 0.35,
               child: Container(
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.only(
@@ -315,13 +350,13 @@ class _MediaCardState extends State<MediaCard>
             ),
 
             // Blur effect for information section when hovering with smooth transition
-            if (_isHovering)
+            if (_showHoverDetails)
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
                 // Extend blur higher up the card for a smoother transition
-                height: cardHeight * 0.8,
+                height: finalCardHeight * 0.8,
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(12.0),
                   child: Stack(
@@ -390,30 +425,32 @@ class _MediaCardState extends State<MediaCard>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   // Add title when hovering (similar to the screenshot)
-                  if (_isHovering) ...[
+                  if (_showHoverDetails) ...[
                     Text(
                       widget.media.name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         color: Colors.white,
-                        fontSize: 14,
+                        fontSize: screenWidth > 600 ? 14 : 12,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    Opacity(
-                      opacity: 0.4,
-                      child: Text(
-                        widget.media.description,
-                        maxLines: 3,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w300,
+                    if (widget.media.description.isNotEmpty &&
+                        widget.media.description != '-1')
+                      Opacity(
+                        opacity: 0.4,
+                        child: Text(
+                          widget.media.description,
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: screenWidth > 600 ? 10 : 9,
+                            fontWeight: FontWeight.w300,
+                          ),
                         ),
                       ),
-                    ),
                     const SizedBox(height: 4),
                     Row(
                       children: [
@@ -430,27 +467,36 @@ class _MediaCardState extends State<MediaCard>
                             widget.media.type.toUpperCase(),
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: screenWidth > 600 ? 10 : 9,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${widget.media.year}',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
-                        ),
+                        if (widget.media.year > 0 &&
+                            widget.media.year != -1) ...[
+                          const SizedBox(width: 8),
+                          Text(
+                            '${widget.media.year}',
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: screenWidth > 600 ? 12 : 11,
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                     const SizedBox(height: 4),
                     if (widget.media.genre.isNotEmpty)
                       Text(
-                        widget.media.genre.map((e) => e.name).join(', '),
+                        widget.media.genre
+                            .map((e) => e.name)
+                            .where((name) => name != '-1' && name != '0')
+                            .join(', '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 12,
+                          fontSize: screenWidth > 600 ? 12 : 10,
                         ),
                       ),
                     const SizedBox(height: 8),
@@ -470,13 +516,18 @@ class _MediaCardState extends State<MediaCard>
                                 ),
                               );
                             },
-                            icon: Icon(Icons.play_arrow, size: 18),
+                            icon: Icon(
+                              Icons.play_arrow,
+                              size: screenWidth > 600 ? 18 : 16,
+                            ),
                             label: Text('Watch'),
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.blue,
                               foregroundColor: Colors.white,
                               padding: EdgeInsets.symmetric(vertical: 6),
-                              textStyle: TextStyle(fontSize: 12),
+                              textStyle: TextStyle(
+                                fontSize: screenWidth > 600 ? 12 : 10,
+                              ),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(4),
                               ),
@@ -497,7 +548,9 @@ class _MediaCardState extends State<MediaCard>
                               horizontal: 10,
                               vertical: 6,
                             ),
-                            textStyle: TextStyle(fontSize: 12),
+                            textStyle: TextStyle(
+                              fontSize: screenWidth > 600 ? 12 : 10,
+                            ),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(4),
                             ),
@@ -536,10 +589,39 @@ class _MediaCardState extends State<MediaCard>
   }
 
   Widget _buildBackdropCard() {
+    final screenSize = MediaQuery.of(context).size;
+    final screenWidth = screenSize.width;
+
+    // Calculate responsive dimensions for backdrop cards
+    final aspectRatio = 16.0 / 9.0; // 16:9 aspect ratio
+    double cardWidth;
+
+    if (screenWidth > 1200) {
+      // Large screens (desktop)
+      cardWidth = screenWidth * 0.14;
+    } else if (screenWidth > 800) {
+      // Medium screens (tablet)
+      cardWidth = screenWidth * 0.18;
+    } else if (screenWidth > 600) {
+      // Small tablets
+      cardWidth = screenWidth * 0.25;
+    } else {
+      // Mobile screens
+      cardWidth = screenWidth * 0.35;
+    }
+
+    // Calculate height based on aspect ratio
+    // Ensure minimum and maximum sizes with proper aspect ratio
+    final finalCardWidth = cardWidth.clamp(180.0, 320.0);
+    final finalCardHeight = finalCardWidth / aspectRatio;
+
     return Container(
-      width: widget.width,
-      height: widget.height,
-      margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+      width: finalCardWidth,
+      height: finalCardHeight,
+      margin: EdgeInsets.symmetric(
+        horizontal: screenWidth > 600 ? 6.0 : 3.0,
+        vertical: 3.0,
+      ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(12.0),
         boxShadow:
@@ -632,9 +714,9 @@ class _MediaCardState extends State<MediaCard>
                     widget.media.name,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       color: Colors.white,
-                      fontSize: 16,
+                      fontSize: screenWidth > 600 ? 16 : 14,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -656,15 +738,19 @@ class _MediaCardState extends State<MediaCard>
                             widget.media.type.toUpperCase(),
                             style: TextStyle(
                               color: Colors.white,
-                              fontSize: 10,
+                              fontSize: screenWidth > 600 ? 10 : 9,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          '${widget.media.year} • ${widget.media.runtime}',
-                          style: TextStyle(color: Colors.white70, fontSize: 12),
+                          // '',
+                          '${(widget.media.year > 0) ? widget.media.year : ""}${(widget.media.year > 0 && widget.media.runtime.isNotEmpty) ? " • " : ""}${widget.media.runtime}',
+                          style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: screenWidth > 600 ? 12 : 10,
+                          ),
                         ),
                       ],
                     ),
@@ -674,9 +760,9 @@ class _MediaCardState extends State<MediaCard>
                         widget.media.genre.map((e) => e.name).join(', '),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           color: Colors.white70,
-                          fontSize: 12,
+                          fontSize: screenWidth > 600 ? 12 : 10,
                         ),
                       ),
                   ],
