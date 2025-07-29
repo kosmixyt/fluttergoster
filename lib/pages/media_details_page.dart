@@ -288,6 +288,69 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
               ),
             ),
 
+            // Poster à gauche sur PC
+            if (MediaQuery.of(context).size.width > 800)
+              Positioned(
+                left: 0,
+                top: 0,
+                bottom: 0,
+                child: Container(
+                  width: MediaQuery.of(context).size.width * 0.25,
+                  padding: const EdgeInsets.all(24),
+                  child: SafeArea(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 60), // Espace pour la topbar
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.8),
+                                spreadRadius: 0,
+                                blurRadius: 30,
+                                offset: const Offset(0, 15),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: AspectRatio(
+                              aspectRatio: 2 / 3, // Ratio poster standard
+                              child: CookieImage(
+                                imageUrl: movie.poster,
+                                fit: BoxFit.cover,
+                                errorBuilder:
+                                    (context, error, stackTrace) => Container(
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.topLeft,
+                                          end: Alignment.bottomRight,
+                                          colors: [
+                                            Colors.grey[800]!,
+                                            Colors.grey[900]!,
+                                          ],
+                                        ),
+                                      ),
+                                      child: const Center(
+                                        child: Icon(
+                                          Icons.movie_rounded,
+                                          size: 64,
+                                          color: Colors.white30,
+                                        ),
+                                      ),
+                                    ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
             CustomScrollView(
               slivers: [
                 SliverAppBar(
@@ -339,394 +402,91 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // --- NOUVEAU POSTER DESIGN ---
+                        // --- TITRE PRINCIPAL SUR MOBILE (déplacé avant le cadre) ---
                         if (MediaQuery.of(context).size.width <= 800)
                           Container(
-                            margin: const EdgeInsets.only(bottom: 32),
-                            child: Stack(
-                              children: [
-                                // Carte principale avec effet glassmorphism
-                                Container(
-                                  padding: const EdgeInsets.all(20),
-                                  decoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topLeft,
-                                      end: Alignment.bottomRight,
-                                      colors: [
-                                        Colors.white.withOpacity(0.1),
-                                        Colors.white.withOpacity(0.05),
-                                      ],
-                                    ),
-                                    borderRadius: BorderRadius.circular(24),
-                                    border: Border.all(
-                                      color: Colors.white.withOpacity(0.2),
-                                      width: 1,
-                                    ),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.3),
-                                        spreadRadius: 0,
-                                        blurRadius: 20,
-                                        offset: const Offset(0, 10),
-                                      ),
-                                    ],
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // Poster amélioré avec effet 3D
-                                      Container(
-                                        width: 140,
-                                        height: 210,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                            16,
-                                          ),
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withOpacity(
-                                                0.6,
-                                              ),
-                                              spreadRadius: 0,
-                                              blurRadius: 25,
-                                              offset: const Offset(0, 15),
-                                            ),
-                                            BoxShadow(
-                                              color: const Color(
-                                                0xFF3B82F6,
-                                              ).withOpacity(0.3),
-                                              spreadRadius: 0,
-                                              blurRadius: 20,
-                                              offset: const Offset(0, 5),
-                                            ),
-                                          ],
-                                        ),
-                                        child: Stack(
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(16),
-                                              child: CookieImage(
-                                                imageUrl: movie.poster,
-                                                fit: BoxFit.cover,
-                                                errorBuilder:
-                                                    (
-                                                      context,
-                                                      error,
-                                                      stackTrace,
-                                                    ) => Container(
-                                                      decoration: BoxDecoration(
-                                                        gradient: LinearGradient(
-                                                          begin:
-                                                              Alignment.topLeft,
-                                                          end:
-                                                              Alignment
-                                                                  .bottomRight,
-                                                          colors: [
-                                                            Colors.grey[800]!,
-                                                            Colors.grey[900]!,
-                                                          ],
-                                                        ),
-                                                      ),
-                                                      child: const Center(
-                                                        child: Icon(
-                                                          Icons.movie_outlined,
-                                                          size: 64,
-                                                          color: Colors.white30,
-                                                        ),
-                                                      ),
-                                                    ),
-                                              ),
-                                            ),
-                                            // Effet brillance
-                                            Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius:
-                                                    BorderRadius.circular(16),
-                                                gradient: LinearGradient(
-                                                  begin: Alignment.topLeft,
-                                                  end: Alignment.bottomRight,
-                                                  colors: [
-                                                    Colors.white.withOpacity(
-                                                      0.2,
-                                                    ),
-                                                    Colors.transparent,
-                                                    Colors.transparent,
-                                                    Colors.black.withOpacity(
-                                                      0.1,
-                                                    ),
-                                                  ],
-                                                  stops: const [
-                                                    0.0,
-                                                    0.3,
-                                                    0.7,
-                                                    1.0,
-                                                  ],
+                            margin: const EdgeInsets.only(bottom: 20),
+                            child: Center(
+                              child:
+                                  movie.logo.isNotEmpty
+                                      ? SizedBox(
+                                        height: 80,
+                                        child: CookieImage(
+                                          imageUrl: movie.logo,
+                                          fit: BoxFit.contain,
+                                          errorBuilder:
+                                              (
+                                                context,
+                                                error,
+                                                stackTrace,
+                                              ) => Text(
+                                                movie.displayName.toUpperCase(),
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                  fontSize: 32,
+                                                  fontWeight: FontWeight.w800,
+                                                  color: Colors.white,
+                                                  letterSpacing: 2.0,
+                                                  height: 1.0,
                                                 ),
                                               ),
-                                            ),
-                                          ],
+                                        ),
+                                      )
+                                      : Text(
+                                        movie.displayName.toUpperCase(),
+                                        textAlign: TextAlign.center,
+                                        style: const TextStyle(
+                                          fontSize: 32,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white,
+                                          letterSpacing: 2.0,
+                                          height: 1.0,
                                         ),
                                       ),
-                                      const SizedBox(width: 20),
-                                      // Informations avec nouveau design
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            const SizedBox(height: 12),
-                                            // Badge année avec gradient
-                                            if (movie.year > 0)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 16,
-                                                      vertical: 8,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  gradient:
-                                                      const LinearGradient(
-                                                        colors: [
-                                                          Color(0xFF6366F1),
-                                                          Color(0xFF3B82F6),
-                                                        ],
-                                                      ),
-                                                  borderRadius:
-                                                      BorderRadius.circular(25),
-                                                  boxShadow: [
-                                                    BoxShadow(
-                                                      color: const Color(
-                                                        0xFF3B82F6,
-                                                      ).withOpacity(0.4),
-                                                      spreadRadius: 0,
-                                                      blurRadius: 12,
-                                                      offset: const Offset(
-                                                        0,
-                                                        4,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                child: Text(
-                                                  movie.year.toString(),
-                                                  style: const TextStyle(
-                                                    color: Colors.white,
-                                                    fontSize: 13,
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                                ),
-                                              ),
-                                            const SizedBox(height: 16),
-                                            // Note avec étoiles améliorées
-                                            if (movie.voteAverage > 0)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 8,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.amber
-                                                      .withOpacity(0.1),
-                                                  borderRadius:
-                                                      BorderRadius.circular(20),
-                                                  border: Border.all(
-                                                    color: Colors.amber
-                                                        .withOpacity(0.3),
-                                                    width: 1,
-                                                  ),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.star_rounded,
-                                                      color: Colors.amber[400],
-                                                      size: 18,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      movie.voteAverage
-                                                          .toString(),
-                                                      style: TextStyle(
-                                                        color:
-                                                            Colors.amber[300],
-                                                        fontSize: 14,
-                                                        fontWeight:
-                                                            FontWeight.bold,
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 4),
-                                                    Text(
-                                                      '/10',
-                                                      style: TextStyle(
-                                                        color:
-                                                            Colors.amber[200],
-                                                        fontSize: 12,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            const SizedBox(height: 12),
-                                            // Durée avec icône améliorée
-                                            if (movie.runtime > 0)
-                                              Container(
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                      vertical: 6,
-                                                    ),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.grey[700]!
-                                                      .withOpacity(0.3),
-                                                  borderRadius:
-                                                      BorderRadius.circular(15),
-                                                ),
-                                                child: Row(
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children: [
-                                                    Icon(
-                                                      Icons.schedule_rounded,
-                                                      color: Colors.grey[300],
-                                                      size: 16,
-                                                    ),
-                                                    const SizedBox(width: 6),
-                                                    Text(
-                                                      '${movie.runtime} min',
-                                                      style: TextStyle(
-                                                        color: Colors.grey[300],
-                                                        fontSize: 13,
-                                                        fontWeight:
-                                                            FontWeight.w500,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            const SizedBox(height: 16),
-                                            // Genres avec meilleur design
-                                            if (movie.genre.isNotEmpty)
-                                              Wrap(
-                                                spacing: 6.0,
-                                                runSpacing: 6.0,
-                                                children:
-                                                    movie.genre
-                                                        .take(3)
-                                                        .map(
-                                                          (genre) => Container(
-                                                            padding:
-                                                                const EdgeInsets.symmetric(
-                                                                  horizontal:
-                                                                      12,
-                                                                  vertical: 6,
-                                                                ),
-                                                            decoration: BoxDecoration(
-                                                              gradient: LinearGradient(
-                                                                colors: [
-                                                                  Colors
-                                                                      .grey[800]!
-                                                                      .withOpacity(
-                                                                        0.7,
-                                                                      ),
-                                                                  Colors
-                                                                      .grey[900]!
-                                                                      .withOpacity(
-                                                                        0.5,
-                                                                      ),
-                                                                ],
-                                                              ),
-                                                              borderRadius:
-                                                                  BorderRadius.circular(
-                                                                    15,
-                                                                  ),
-                                                              border: Border.all(
-                                                                color: Colors
-                                                                    .grey[600]!
-                                                                    .withOpacity(
-                                                                      0.3,
-                                                                    ),
-                                                                width: 1,
-                                                              ),
-                                                            ),
-                                                            child: Text(
-                                                              genre.name,
-                                                              style: const TextStyle(
-                                                                color:
-                                                                    Colors
-                                                                        .white70,
-                                                                fontSize: 11,
-                                                                fontWeight:
-                                                                    FontWeight
-                                                                        .w500,
-                                                              ),
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
-                                              ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
                             ),
                           ),
 
-                        // --- TITRE PRINCIPAL ---
-                        Center(
-                          child:
-                              movie.logo.isNotEmpty
-                                  ? SizedBox(
-                                    height:
-                                        MediaQuery.of(context).size.width <= 800
-                                            ? 80
-                                            : 100,
-                                    child: CookieImage(
-                                      imageUrl: movie.logo,
-                                      fit: BoxFit.contain,
-                                      errorBuilder:
-                                          (context, error, stackTrace) => Text(
-                                            movie.displayName.toUpperCase(),
-                                            textAlign: TextAlign.center,
-                                            style: TextStyle(
-                                              fontSize:
-                                                  MediaQuery.of(
-                                                            context,
-                                                          ).size.width <=
-                                                          800
-                                                      ? 32
-                                                      : 48,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.white,
-                                              letterSpacing: 2.0,
-                                              height: 1.0,
-                                            ),
-                                          ),
+                        // --- NOUVEAU POSTER DESIGN (supprimé sur mobile) ---
+                        // Card poster supprimée sur mobile pour plus d'espace
+
+                        // --- TITRE PRINCIPAL (desktop uniquement) ---
+                        if (MediaQuery.of(context).size.width > 800)
+                          Center(
+                            child:
+                                movie.logo.isNotEmpty
+                                    ? SizedBox(
+                                      height: 100,
+                                      child: CookieImage(
+                                        imageUrl: movie.logo,
+                                        fit: BoxFit.contain,
+                                        errorBuilder:
+                                            (context, error, stackTrace) =>
+                                                Text(
+                                                  movie.displayName
+                                                      .toUpperCase(),
+                                                  textAlign: TextAlign.center,
+                                                  style: const TextStyle(
+                                                    fontSize: 48,
+                                                    fontWeight: FontWeight.w800,
+                                                    color: Colors.white,
+                                                    letterSpacing: 2.0,
+                                                    height: 1.0,
+                                                  ),
+                                                ),
+                                      ),
+                                    )
+                                    : Text(
+                                      movie.displayName.toUpperCase(),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 48,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white,
+                                        letterSpacing: 2.0,
+                                        height: 1.0,
+                                      ),
                                     ),
-                                  )
-                                  : Text(
-                                    movie.displayName.toUpperCase(),
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      fontSize:
-                                          MediaQuery.of(context).size.width <=
-                                                  800
-                                              ? 32
-                                              : 48,
-                                      fontWeight: FontWeight.w800,
-                                      color: Colors.white,
-                                      letterSpacing: 2.0,
-                                      height: 1.0,
-                                    ),
-                                  ),
-                        ),
+                          ),
                         // --- BADGES INFOS (desktop uniquement) ---
                         if (MediaQuery.of(context).size.width > 800)
                           Padding(
@@ -775,92 +535,98 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                             ),
                           ),
                         // --- BOUTONS (déplacés ici) ---
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            OutlinedButton(
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: const BorderSide(color: Colors.grey),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
+                        Container(
+                          margin: const EdgeInsets.only(top: 20),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              OutlinedButton(
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: const BorderSide(color: Colors.grey),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 12,
+                                  ),
                                 ),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 12,
-                                ),
-                              ),
-                              onPressed:
-                                  _isUpdatingWatchlist
-                                      ? null
-                                      : () => _toggleWatchlist(
-                                        'movie',
-                                        movie.id,
-                                        movie.watchlisted,
-                                      ),
-                              child:
-                                  _isUpdatingWatchlist
-                                      ? const SizedBox(
-                                        width: 16,
-                                        height: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
+                                onPressed:
+                                    _isUpdatingWatchlist
+                                        ? null
+                                        : () => _toggleWatchlist(
+                                          'movie',
+                                          movie.id,
+                                          movie.watchlisted,
                                         ),
-                                      )
-                                      : Text(
-                                        movie.watchlisted
-                                            ? 'Remove from Watchlist'
-                                            : 'Add to Watchlist',
-                                      ),
-                            ),
-                            const SizedBox(width: 12),
-                            TorrentInfoButton(
-                              itemId: movie.id,
-
-                              itemType: 'movie',
-                              hasFiles: movie.files.isNotEmpty,
-                              sourceItem:
-                                  movie, // Pass the movie as source item
-                            ),
-                            const SizedBox(width: 12),
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder:
-                                      (context) => TorrentSearchModal(
-                                        apiService: ApiServiceProvider.of(
-                                          context,
+                                child:
+                                    _isUpdatingWatchlist
+                                        ? const SizedBox(
+                                          width: 16,
+                                          height: 16,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            valueColor:
+                                                AlwaysStoppedAnimation<Color>(
+                                                  Colors.white,
+                                                ),
+                                          ),
+                                        )
+                                        : Text(
+                                          movie.watchlisted
+                                              ? 'Remove from Watchlist'
+                                              : 'Add to Watchlist',
                                         ),
-                                        mediaId: movie.id,
-                                        mediaType: 'movie',
-                                      ),
-                                );
-                              },
-                              icon: const Icon(Icons.search),
-                              label: const Text('Search Torrents'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF3B82F6),
-                                foregroundColor: Colors.white,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(4),
-                                ),
                               ),
-                            ),
-                            if (movie.files.isEmpty) ...[
                               const SizedBox(width: 12),
-                              ContentRequestButton(
+                              TorrentInfoButton(
                                 itemId: movie.id,
+
                                 itemType: 'movie',
-                                apiService: ApiServiceProvider.of(context),
+                                hasFiles: movie.files.isNotEmpty,
+                                sourceItem:
+                                    movie, // Pass the movie as source item
                               ),
-                              const SizedBox(width: 10),
+                              // Afficher le bouton "Search Torrents" seulement si le film n'a pas de fichiers
+                              if (movie.files.isEmpty) ...[
+                                const SizedBox(width: 12),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (context) => TorrentSearchModal(
+                                            apiService: ApiServiceProvider.of(
+                                              context,
+                                            ),
+                                            mediaId: movie.id,
+                                            mediaType: 'movie',
+                                          ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.search),
+                                  label: const Text('Search Torrents'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF3B82F6),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                              if (movie.files.isEmpty) ...[
+                                const SizedBox(width: 12),
+                                ContentRequestButton(
+                                  itemId: movie.id,
+                                  itemType: 'movie',
+                                  apiService: ApiServiceProvider.of(context),
+                                ),
+                                const SizedBox(width: 10),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
 
                         // --- FIN BOUTONS ---
@@ -950,7 +716,10 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                               // Bouton Play principal redesigné
                               Container(
                                 width: double.infinity,
-                                height: 70,
+                                height:
+                                    MediaQuery.of(context).size.width <= 800
+                                        ? 50
+                                        : 70, // Plus petit sur mobile
                                 decoration: BoxDecoration(
                                   gradient:
                                       selectedFile != null ||
@@ -1166,7 +935,11 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                   // Bouton Download amélioré
                                   Expanded(
                                     child: Container(
-                                      height: 56,
+                                      height:
+                                          MediaQuery.of(context).size.width <=
+                                                  800
+                                              ? 42
+                                              : 56, // Plus petit sur mobile
                                       decoration: BoxDecoration(
                                         gradient:
                                             selectedFile != null
@@ -1264,8 +1037,14 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                             16,
                                           ),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal:
+                                                  MediaQuery.of(
+                                                            context,
+                                                          ).size.width <=
+                                                          800
+                                                      ? 8
+                                                      : 16,
                                             ),
                                             child: Row(
                                               mainAxisAlignment:
@@ -1293,15 +1072,27 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 12),
-                                                Text(
-                                                  'Télécharger',
-                                                  style: TextStyle(
-                                                    color:
-                                                        selectedFile != null
-                                                            ? Colors.white
-                                                            : Colors.grey[500],
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
+                                                Flexible(
+                                                  child: Text(
+                                                    'Télécharger',
+                                                    style: TextStyle(
+                                                      color:
+                                                          selectedFile != null
+                                                              ? Colors.white
+                                                              : Colors
+                                                                  .grey[500],
+                                                      fontSize:
+                                                          MediaQuery.of(context)
+                                                                      .size
+                                                                      .width <=
+                                                                  800
+                                                              ? 14
+                                                              : 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -1317,7 +1108,11 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                   // Bouton Partager amélioré
                                   Expanded(
                                     child: Container(
-                                      height: 56,
+                                      height:
+                                          MediaQuery.of(context).size.width <=
+                                                  800
+                                              ? 42
+                                              : 56, // Plus petit sur mobile
                                       decoration: BoxDecoration(
                                         gradient:
                                             selectedFile != null
@@ -1382,8 +1177,14 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                             16,
                                           ),
                                           child: Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 16,
+                                            padding: EdgeInsets.symmetric(
+                                              horizontal:
+                                                  MediaQuery.of(
+                                                            context,
+                                                          ).size.width <=
+                                                          800
+                                                      ? 8
+                                                      : 16,
                                             ),
                                             child: Row(
                                               mainAxisAlignment:
@@ -1411,15 +1212,27 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
                                                   ),
                                                 ),
                                                 const SizedBox(width: 12),
-                                                Text(
-                                                  'Partager',
-                                                  style: TextStyle(
-                                                    color:
-                                                        selectedFile != null
-                                                            ? Colors.white
-                                                            : Colors.grey[500],
-                                                    fontSize: 16,
-                                                    fontWeight: FontWeight.bold,
+                                                Flexible(
+                                                  child: Text(
+                                                    'Partager',
+                                                    style: TextStyle(
+                                                      color:
+                                                          selectedFile != null
+                                                              ? Colors.white
+                                                              : Colors
+                                                                  .grey[500],
+                                                      fontSize:
+                                                          MediaQuery.of(context)
+                                                                      .size
+                                                                      .width <=
+                                                                  800
+                                                              ? 14
+                                                              : 16,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
                                                   ),
                                                 ),
                                               ],
@@ -2615,32 +2428,33 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
     final int halfLength = similars.length ~/ 2;
     final firstHalf = similars.take(halfLength).toList();
     final secondHalf = similars.skip(halfLength).toList();
+    final bool isMobile = MediaQuery.of(context).size.width <= 800;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.only(bottom: 16.0),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16.0),
           child: Text(
             'You might also like',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: isMobile ? 24 : 20, // Plus grand sur mobile
               fontWeight: FontWeight.bold,
             ),
           ),
         ),
         if (firstHalf.isNotEmpty) ...[
           SizedBox(
-            height: 200,
+            height: isMobile ? 240 : 200, // Plus haut sur mobile
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: firstHalf.length,
               itemBuilder: (context, index) {
                 return MediaCard(
                   media: firstHalf[index],
-                  width: 280,
-                  height: 180,
+                  width: isMobile ? 320 : 280, // Plus large sur mobile
+                  height: isMobile ? 220 : 180, // Plus haut sur mobile
                   displayMode: MediaCardDisplayMode.backdrop,
                 );
               },
@@ -2650,15 +2464,15 @@ class _MediaDetailsPageState extends State<MediaDetailsPage> {
         ],
         if (secondHalf.isNotEmpty) ...[
           SizedBox(
-            height: 240,
+            height: isMobile ? 280 : 240, // Plus haut sur mobile
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               itemCount: secondHalf.length,
               itemBuilder: (context, index) {
                 return MediaCard(
                   media: secondHalf[index],
-                  width: 150,
-                  height: 220,
+                  width: isMobile ? 180 : 150, // Plus large sur mobile
+                  height: isMobile ? 260 : 220, // Plus haut sur mobile
                   displayMode: MediaCardDisplayMode.poster,
                 );
               },

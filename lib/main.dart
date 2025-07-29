@@ -130,6 +130,8 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: TextField(
                         controller: _usernameController,
+                        obscureText: true,
+
                         style: const TextStyle(color: Colors.white),
                         decoration: InputDecoration(
                           labelText: 'Nom d\'utilisateur',

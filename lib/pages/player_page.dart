@@ -33,7 +33,8 @@ class PlayerPage extends StatefulWidget {
   State<PlayerPage> createState() => _PlayerPageState();
 }
 
-class _PlayerPageState extends State<PlayerPage> {
+class _PlayerPageState extends State<PlayerPage>
+    with AutomaticKeepAliveClientMixin {
   late final Player _player;
   late final VideoController _controller;
   bool _isFullScreen = false;
@@ -45,6 +46,25 @@ class _PlayerPageState extends State<PlayerPage> {
   late ApiService _apiService;
   bool _showNextCard =
       false; // Add this line to track when to show the next card
+  bool _isMobileDevice = false; // Cache the mobile device state
+  Size? _cachedScreenSize; // Cache screen size to avoid rebuilds
+  bool _didChangeDependenciesCalled =
+      false; // Track if dependencies were initialized
+
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  void didUpdateWidget(PlayerPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Don't update on widget changes to prevent rebuilds during resize
+    // Only update if critical properties changed
+    if (oldWidget.transcodeUrl != widget.transcodeUrl ||
+        oldWidget.sourceItemId != widget.sourceItemId) {
+      // Only reinitialize if the actual content changed, not just layout
+      _initializePlayer();
+    }
+  }
 
   @override
   void initState() {
@@ -56,17 +76,43 @@ class _PlayerPageState extends State<PlayerPage> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _apiService = ApiServiceProvider.of(context);
-    _initializePlayer();
 
-    // Set preferred orientations for the video player
-    SystemChrome.setPreferredOrientations([
-      DeviceOrientation.landscapeLeft,
-      DeviceOrientation.landscapeRight,
-    ]);
+    // Only initialize once to prevent rebuilds on window resize
+    if (!_didChangeDependenciesCalled) {
+      _didChangeDependenciesCalled = true;
 
-    // Hide system UI for immersive experience
-    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+      _apiService = ApiServiceProvider.of(context);
+
+      // Initialize mobile device state
+      _updateMobileDeviceState();
+
+      _initializePlayer();
+
+      // Set preferred orientations for the video player
+      SystemChrome.setPreferredOrientations([
+        DeviceOrientation.landscapeLeft,
+        DeviceOrientation.landscapeRight,
+      ]);
+
+      // Hide system UI for immersive experience
+      SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    }
+  }
+
+  // Update mobile device state without causing rebuilds
+  void _updateMobileDeviceState() {
+    final size = MediaQuery.of(context).size;
+
+    // Only update if size actually changed to avoid unnecessary rebuilds
+    if (_cachedScreenSize != size) {
+      _cachedScreenSize = size;
+      final newIsMobileDevice = size.shortestSide < 600;
+
+      // Only update state if mobile device status actually changed
+      if (_isMobileDevice != newIsMobileDevice) {
+        _isMobileDevice = newIsMobileDevice;
+      }
+    }
   }
 
   void _onProgress(String progressData) {
@@ -229,6 +275,26 @@ class _PlayerPageState extends State<PlayerPage> {
     }
   }
 
+  // Method to send progress update when user seeks
+  void _sendProgressUpdate(int positionInSeconds) {
+    if (_transcoderData != null) {
+      _apiService
+          .sendProgress(
+            _transcoderData!.file.id.toString(),
+            positionInSeconds,
+            _transcoderData!.mediaId.toString(),
+            widget.sourceItemType == 'tv'
+                ? _transcoderData!.getEpisode().toString()
+                : null,
+            _player.state.duration.inSeconds,
+          )
+          .catchError((error) {
+            // Silently handle errors to not interrupt playback
+            print('Error sending seek progress update: $error');
+          });
+    }
+  }
+
   @override
   void dispose() {
     // Stop sending progress updates
@@ -261,13 +327,6 @@ class _PlayerPageState extends State<PlayerPage> {
     _player.dispose();
     FullScreen.setFullScreen(false); // Reset full screen on dispose
     super.dispose();
-  }
-
-  // Determine if the current device is mobile based on screen size
-  bool _isMobileDevice(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    // Consider devices with width less than 600dp as mobile
-    return size.shortestSide < 600;
   }
 
   Widget _buildNextEpisodeCard() {
@@ -490,7 +549,8 @@ class _PlayerPageState extends State<PlayerPage> {
       hasNext:
           _transcoderData != null &&
           _transcoderData!.next.TRANSCODE_URL.isNotEmpty,
-      isMobileDevice: _isMobileDevice(context),
+      isMobileDevice: _isMobileDevice,
+      onProgressUpdate: _sendProgressUpdate,
     );
 
     return Video(
@@ -504,54 +564,64 @@ class _PlayerPageState extends State<PlayerPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body:
-          _isLoading
-              ? _buildLoadingView()
-              : _errorMessage.isNotEmpty
-              ? _buildErrorView()
-              : Stack(
-                children: [
-                  _buildVideoPlayer(),
-                  // Buffering indicator overlay
-                  StreamBuilder<bool>(
-                    stream: _player.stream.buffering,
-                    builder: (context, snapshot) {
-                      final isBuffering = snapshot.data ?? false;
-                      if (isBuffering) {
-                        return Center(
-                          child: Container(
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.5),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const CircularProgressIndicator(
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                    Colors.white,
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+
+    // Prevent rebuilds on window resize by avoiding MediaQuery dependencies
+    return MediaQuery.removePadding(
+      context: context,
+      removeTop: true,
+      removeBottom: true,
+      removeLeft: true,
+      removeRight: true,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body:
+            _isLoading
+                ? _buildLoadingView()
+                : _errorMessage.isNotEmpty
+                ? _buildErrorView()
+                : Stack(
+                  children: [
+                    _buildVideoPlayer(),
+                    // Buffering indicator overlay
+                    StreamBuilder<bool>(
+                      stream: _player.stream.buffering,
+                      builder: (context, snapshot) {
+                        final isBuffering = snapshot.data ?? false;
+                        if (isBuffering) {
+                          return Center(
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.5),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const CircularProgressIndicator(
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                const Text(
-                                  "Chargement...",
-                                  style: TextStyle(color: Colors.white),
-                                ),
-                              ],
+                                  const SizedBox(height: 10),
+                                  const Text(
+                                    "Chargement...",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
-                        );
-                      }
-                      return const SizedBox.shrink();
-                    },
-                  ),
-                  // Next episode card
-                  _buildNextEpisodeCard(),
-                ],
-              ),
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                    // Next episode card
+                    _buildNextEpisodeCard(),
+                  ],
+                ),
+      ),
     );
   }
 
@@ -604,6 +674,8 @@ class MaterialControls extends StatefulWidget {
   final bool isFullscreen;
   final bool hasNext; // Add this parameter
   final bool isMobileDevice; // Add this parameter
+  final Function(int)?
+  onProgressUpdate; // Add this parameter for progress updates
 
   const MaterialControls({
     super.key,
@@ -615,6 +687,7 @@ class MaterialControls extends StatefulWidget {
     required this.isFullscreen,
     this.hasNext = false, // Add this parameter with default value
     required this.isMobileDevice, // Add this parameter
+    this.onProgressUpdate, // Add this parameter
   });
 
   @override
@@ -1206,6 +1279,10 @@ class _MaterialControlsState extends State<MaterialControls> {
                       widget.player.seek(newPosition).then((_) {
                         if (isPlaying) {
                           widget.player.play();
+                        }
+                        // Send progress update when user finishes seeking
+                        if (widget.onProgressUpdate != null) {
+                          widget.onProgressUpdate!(newPosition.inSeconds);
                         }
                       });
                       _startHideControlsTimer();

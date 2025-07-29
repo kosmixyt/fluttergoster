@@ -136,7 +136,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
       padding: EdgeInsets.symmetric(horizontal: spacing),
       child: IconButton(
         icon: Icon(icon, color: Colors.white, size: iconSize),
-        padding: EdgeInsets.zero,
+        padding: EdgeInsets.all(_calculateButtonPadding(MediaQuery.of(context).size.width)),
         constraints: const BoxConstraints(),
         onPressed: () {
           // Navigation vers la section correspondante
@@ -175,7 +175,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (screenWidth > 600) {
       return 18.0; // Petit écran (tablet portrait)
     } else {
-      return 16.0; // Très petit écran (mobile)
+      return 22.0; // Mobile - Beaucoup plus grande pour une meilleure visibilité
     }
   }
 
@@ -205,7 +205,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (screenWidth > 600) {
       return 12.0; // Petit écran (tablet portrait)
     } else {
-      return 8.0; // Très petit écran (mobile)
+      return 10.0; // Mobile - Légèrement augmenté pour un meilleur espacement
     }
   }
 
@@ -218,7 +218,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (screenWidth > 600) {
       return 54.0; // Tablet portrait
     } else {
-      return 52.0; // Mobile
+      return 80.0; // Mobile - Beaucoup plus grande pour une meilleure utilisabilité
     }
   }
 
@@ -231,7 +231,7 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
     } else if (screenWidth > 600) {
       return 7.0; // Tablet portrait
     } else {
-      return 8.0; // Mobile - Plus de padding pour faciliter le touch
+      return 12.0; // Mobile - Beaucoup plus de padding pour faciliter le touch
     }
   }
 
@@ -239,6 +239,6 @@ class GosterTopBar extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize {
     // Ajuste la hauteur préférée en fonction de la largeur de l'écran
     // Note: Nous ne pouvons pas accéder au MediaQuery ici, donc nous utilisons une valeur moyenne
-    return const Size.fromHeight(52.0);
+    return const Size.fromHeight(70.0); // Augmentée pour mobile
   }
 }

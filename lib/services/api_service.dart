@@ -664,6 +664,7 @@ class ApiService {
     if (response.statusCode != 200) {
       throw Exception('Failed to send progress');
     }
+    print('Progress sent successfully');
   }
 
   /// Recherche des torrents avec une requête
